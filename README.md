@@ -26,13 +26,9 @@ pip install aiotsmart
 
 ## Usage
 ```python
-from aiotsmart.tsmart import TSmartClient, QuotaResponse
+from aiotsmart.tsmart import TSmartClient
 
-client = TSmartClient(
-    control_login="something@a", control_password="password"
-)
 
-info_response = await client.get_info()
 ```
 
 ## Changelog & Releases
