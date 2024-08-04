@@ -3,29 +3,24 @@
 from __future__ import annotations
 
 import asyncio
-import asyncio_dgram
-from dataclasses import dataclass
 from importlib import metadata
-from typing import Any, Self
-
-import struct
 import logging
 import socket
+import struct
+from typing import Any, Self
 
-from aiohttp import ClientSession
-from aiohttp.hdrs import METH_POST
+import asyncio_dgram
 from yarl import URL
 
 from aiotsmart.exceptions import (
+    TSmartBadRequestError,
     TSmartConnectionError,
     TSmartError,
-    TSmartAuthenticationError,
-    TSmartValidationError,
     TSmartNotFoundError,
-    TSmartBadRequestError,
+    TSmartTimeoutError,
+    TSmartValidationError,
 )
-from aiotsmart.models import Configuration, Status, Discovery, Mode
-
+from aiotsmart.models import Configuration, Discovery, Mode, Status
 
 VERSION = metadata.version(__package__)
 
@@ -57,7 +52,7 @@ class TSmart:
         stream = await asyncio_dgram.from_socket(sock)
         response_struct = struct.Struct("=BBBHL32sBB")
 
-        devices = dict()
+        devices = {}
 
         data = None
         for i in range(tries):
@@ -75,14 +70,14 @@ class TSmart:
                         continue
 
                     if len(data) != response_struct.size:
-                        _LOGGER.warn(
+                        _LOGGER.warning(
                             "Unexpected packet length (got: %d, expected: %d)"
                             % (len(data), response_struct.size)
                         )
                         continue
 
                     if data[0] == 0:
-                        _LOGGER.warn("Got error response (code %d)" % (data[0]))
+                        _LOGGER.warning("Got error response (code %d)" % (data[0]))
                         continue
 
                     if (
@@ -90,7 +85,7 @@ class TSmart:
                         or data[1] != data[1]
                         or data[2] != data[2]
                     ):
-                        _LOGGER.warn(
+                        _LOGGER.warning(
                             "Unexpected response type (%02X %02X %02X)"
                             % (data[0], data[1], data[2])
                         )
@@ -100,11 +95,12 @@ class TSmart:
                     for b in data[:-1]:
                         t = t ^ b
                     if t ^ 0x55 != data[-1]:
-                        _LOGGER.warn("Received packet checksum failed")
+                        _LOGGER.warning("Received packet checksum failed")
                         continue
 
                     _LOGGER.info("Got response from %s" % remote_addr[0])
 
+                    # pylint:disable=unused-variable
                     if remote_addr[0] not in devices:
                         (
                             cmd,
@@ -117,7 +113,7 @@ class TSmart:
                             checksum,
                         ) = response_struct.unpack(data)
                         device_name = name.decode("utf-8").split("\x00")[0]
-                        device_id_str = "%4X" % device_id
+                        device_id_str = f"{device_id:04X}"
                         _LOGGER.info("Discovered %s %s" % (device_id_str, device_name))
                         devices[remote_addr[0]] = TSmart(
                             remote_addr[0], device_id_str, device_name
@@ -135,7 +131,9 @@ class TSmart:
 
         return devices.values()
 
-    async def _async_request(self, request, response_struct):
+    async def _async_request(
+        self, request: bytes, response_struct: struct.Struct
+    ) -> bytes:
         self.request_successful = False
 
         t = 0
@@ -161,18 +159,18 @@ class TSmart:
             try:
                 data, remote_addr = await asyncio.wait_for(stream.recv(), 2)
                 if len(data) != response_struct.size:
-                    _LOGGER.warn(
+                    _LOGGER.warning(
                         "Unexpected packet length (got: %d, expected: %d)"
                         % (len(data), response_struct.size)
                     )
                     continue
 
                 if data[0] == 0:
-                    _LOGGER.warn("Got error response (code %d)" % (data[0]))
+                    _LOGGER.warning("Got error response (code %d)" % (data[0]))
                     continue
 
                 if data[0] != request[0] or data[1] != data[1] or data[2] != data[2]:
-                    _LOGGER.warn(
+                    _LOGGER.warning(
                         "Unexpected response type (%02X %02X %02X)"
                         % (data[0], data[1], data[2])
                     )
@@ -182,7 +180,7 @@ class TSmart:
                 for b in data[:-1]:
                     t = t ^ b
                 if t ^ 0x55 != data[-1]:
-                    _LOGGER.warn("Received packet checksum failed")
+                    _LOGGER.warning("Received packet checksum failed")
 
             except asyncio.exceptions.TimeoutError:
                 continue
@@ -192,8 +190,7 @@ class TSmart:
         stream.close()
 
         if data is None:
-            _LOGGER.warn("Timed-out fetching status from %s" % self.ip)
-            return None
+            raise TSmartTimeoutError()
 
         self.request_successful = True
         return data
@@ -230,7 +227,7 @@ class TSmart:
         ) = response_struct.unpack(response)
 
         configuration = Configuration(
-            device_id="%4X" % device_id,
+            device_id=f"{device_id:04X}",
             device_name=device_name.decode("utf-8").split("\x00")[0],
             firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
             firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
@@ -250,6 +247,7 @@ class TSmart:
         if response is None:
             return
 
+        # pylint:disable=unused-variable
         (
             cmd,
             sub,

@@ -9,6 +9,10 @@ class TSmartConnectionError(TSmartError):
     """TSmart connection exception."""
 
 
+class TSmartTimeoutError(TSmartError):
+    """TSmart timeout exception."""
+
+
 class TSmartValidationError(TSmartError):
     """TSmart validation exception."""
 
