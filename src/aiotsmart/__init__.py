@@ -3,22 +3,21 @@
 from aiotsmart.exceptions import (
     TSmartConnectionError,
     TSmartError,
-    TSmartAuthenticationError,
     TSmartValidationError,
     TSmartBadRequestError,
     TSmartNotFoundError,
 )
 from aiotsmart.tsmart import TSmart
-from aiotsmart.models import InfoResponse, Info
+from aiotsmart.models import Configuration, Status, Mode
 
 __all__ = [
     "TSmartConnectionError",
     "TSmartError",
-    "TSmartAuthenticationError",
     "TSmartBadRequestError",
     "TSmartNotFoundError",
     "TSmartValidationError",
     "TSmart",
-    "InfoResponse",
-    "Info",
+    "Configuration",
+    "Status",
+    "Mode",
 ]

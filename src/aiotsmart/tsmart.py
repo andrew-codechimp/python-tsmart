@@ -12,8 +12,6 @@ import struct
 import logging
 import socket
 
-from enum import IntEnum
-
 from aiohttp import ClientSession
 from aiohttp.hdrs import METH_POST
 from yarl import URL
@@ -26,7 +24,7 @@ from aiotsmart.exceptions import (
     TSmartNotFoundError,
     TSmartBadRequestError,
 )
-from aiotsmart.models import InfoResponse
+from aiotsmart.models import Configuration, Status, Discovery, Mode
 
 
 VERSION = metadata.version(__package__)
@@ -36,19 +34,6 @@ UDP_PORT = 1337
 _LOGGER = logging.getLogger(__name__)
 
 
-class TSmartMode(IntEnum):
-    """TSmart Modes."""
-
-    MANUAL = 0x00
-    ECO = 0x01
-    SMART = 0x02
-    TIMER = 0x03
-    TRAVEL = 0x04
-    BOOST = 0x05
-    LIMITED = 0x21
-    CRITICAL = 0x22
-
-
 class TSmart:
     """TSmart Client."""
 
@@ -56,13 +41,7 @@ class TSmart:
         self.ip = ip
         self.device_id = device_id
         self.name = name
-        self.power = None
-        self.temperature_average = None
-        self.temperature_high = None
-        self.temperature_low = None
-        self.mode = None
-        self.setpoint = None
-        self.relay = None
+
         self.request_successful = False
 
     async def async_discover(self, stop_on_first=False, tries=2, timeout=2):
@@ -219,15 +198,17 @@ class TSmart:
         self.request_successful = True
         return data
 
-    async def async_get_configuration(self):
+    async def async_get_configuration(self) -> Configuration | None:
+        """Get configuration from immersion heater."""
+
         _LOGGER.info("Async get configuration")
         request = struct.pack("=BBBB", 0x21, 0, 0, 0)
 
-        response_struct = struct.Struct("=BBBHL32sB284s")
+        response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
         response = await self._async_request(request, response_struct)
 
         if response is None:
-            return
+            return None
 
         (
             cmd,
@@ -237,15 +218,29 @@ class TSmart:
             device_id,
             device_name,
             tz,
+            userbin,
+            firmware_version_major,
+            firmware_version_minor,
+            firmware_version_deployment,
+            firmware_name,
+            legacy,
+            wifi_ssid,
+            wifi_password,
             unused,
         ) = response_struct.unpack(response)
 
-        self.device_id = "%4X" % device_id
-        self.name = device_name.decode("utf-8").split("\x00")[0]
+        configuration = Configuration(
+            device_id="%4X" % device_id,
+            device_name=device_name.decode("utf-8").split("\x00")[0],
+            firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
+            firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
+        )
 
         _LOGGER.info("Received configuration from %s" % self.ip)
 
-    async def async_get_status(self):
+        return configuration
+
+    async def async_get_status(self) -> Status | None:
         _LOGGER.info("Async get status")
         request = struct.pack("=BBBB", 0xF1, 0, 0, 0)
 
@@ -270,15 +265,19 @@ class TSmart:
             checksum,
         ) = response_struct.unpack(response)
 
-        self.temperature_average = (t_high + t_low) / 20
-        self.temperature_high = t_high / 10
-        self.temperature_low = t_low / 10
-        self.setpoint = setpoint / 10
-        self.power = bool(power)
-        self.mode = TSmartMode(mode)
-        self.relay = bool(relay)
+        status = Status(
+            power=bool(power),
+            setpoint=setpoint / 10,
+            mode=Mode(mode),
+            temperature_high=t_high / 10,
+            temperature_low=t_low / 10,
+            temperature_average=(t_high + t_low) / 20,
+            relay=bool(relay),
+        )
 
         _LOGGER.info("Received status from %s" % self.ip)
+
+        return status
 
     async def async_control_set(self, power, mode, setpoint):
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))

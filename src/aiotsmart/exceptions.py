@@ -9,10 +9,6 @@ class TSmartConnectionError(TSmartError):
     """TSmart connection exception."""
 
 
-class TSmartAuthenticationError(TSmartError):
-    """TSmart authentication exception."""
-
-
 class TSmartValidationError(TSmartError):
     """TSmart validation exception."""
 

@@ -1,30 +1,51 @@
 """Models for TSmart."""
 
 from __future__ import annotations
-from typing import Optional
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import IntEnum
 
-from mashumaro import field_options
-from mashumaro.mixins.orjson import DataClassORJSONMixin
+
+class Mode(IntEnum):
+    """TSmart Modes."""
+
+    MANUAL = 0x00
+    ECO = 0x01
+    SMART = 0x02
+    TIMER = 0x03
+    TRAVEL = 0x04
+    BOOST = 0x05
+    LIMITED = 0x21
+    CRITICAL = 0x22
 
 
 @dataclass
-class InfoResponse(DataClassORJSONMixin):
-    """InfoResponse model."""
+class Discovery:
+    """Discovery model."""
 
-    services: Optional[list[Info]] = field(
-        default=None, metadata=field_options(alias="info")
-    )
-    error: Optional[str] = None
+    ip_address: str
+    device_id: str
+    device_name: str
 
 
 @dataclass
-class Info(DataClassORJSONMixin):
-    """Info model."""
+class Configuration:
+    """Configuration model."""
 
-    service_id: str = field(metadata=field_options(alias="ID"))
-    login: str
-    postcode: str
-    quota_monthly: str
-    quota_remaining: str
+    device_id: str
+    device_name: str
+    firmware_version: str
+    firmware_name: str
+
+
+@dataclass
+class Status:
+    """Status model."""
+
+    power: str
+    setpoint: str
+    mode: str
+    temperature_high: str
+    temperature_low: str
+    temperature_average: str
+    relay: str
