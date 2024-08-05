@@ -12,7 +12,12 @@ from typing import Self
 
 import asyncio_dgram
 
-from aiotsmart.exceptions import TSmartTimeoutError, TSmartNoResponseError
+from aiotsmart.exceptions import (
+    TSmartConnectionError,
+    TSmartNoResponseError,
+    TSmartNotFoundError,
+    TSmartTimeoutError,
+)
 from aiotsmart.models import Configuration, Mode, Status
 
 VERSION = metadata.version(__package__)
@@ -137,13 +142,21 @@ class TSmart:
             t = t ^ b
         request[-1] = t ^ 0x55
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
 
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("", 1337))
-        sock.connect((self.ip, UDP_PORT))
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("", 1337))
+            sock.connect((self.ip, UDP_PORT))
 
-        stream = await asyncio_dgram.from_socket(sock)
+            stream = await asyncio_dgram.from_socket(sock)
+        except OSError as exception:
+            msg = exception.strerror
+            if exception.errno == 8:
+                raise TSmartNotFoundError(msg) from exception
+            if exception.errno == 48:
+                msg = "Unable to connect to socket"
+            raise TSmartConnectionError(msg) from exception
 
         data = None
         for _ in range(2):
@@ -278,7 +291,7 @@ class TSmart:
 
         return status
 
-    async def async_control_set(self, power, mode, setpoint):
+    async def async_control_set(self, power: bool, mode: Mode, setpoint: int):
         """Set the immersion heater."""
 
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))
@@ -287,11 +300,13 @@ class TSmart:
             raise ValueError("Invalid mode")
 
         request = struct.pack(
-            "=BBBBHBB", 0xF2, 0, 0, int(power), int(setpoint * 10), mode, 0
+            "=BBBBHBB", 0xF2, 0, 0, 1 if power else 0, setpoint * 10, mode, 0
         )
 
         response_struct = struct.Struct("=BBBB")
         response = await self._async_request(request, response_struct)
+        if response != b"\xf2\x00\x00\xa7":
+            raise TSmartNoResponseError
 
     async def __aenter__(self) -> Self:
         """Async enter.
@@ -309,111 +324,3 @@ class TSmart:
         ----
             _exc_info: Exec type.
         """
-
-
-# @dataclass
-# class TSmartClient:
-#     """Main class for handling connections with TSmart."""
-
-#     control_login: str | None = None
-#     control_password: str | None = None
-#     session: ClientSession | None = None
-#     request_timeout: int = 10
-#     _close_session: bool = False
-
-#     async def _request(
-#         self,
-#         uri: str,
-#         *,
-#         data: dict[str, Any] | None = None,
-#         params: dict[str, Any] | None = None,
-#     ) -> str:
-#         """Handle a request to TSmart."""
-#         url = URL(API_HOST).joinpath(uri)
-
-#         headers = {
-#             "User-Agent": f"AioTSmart/{VERSION}",
-#             "Content-Type": "application/json",
-#         }
-
-#         if not data:
-#             data = {}
-
-#         if self.control_login and self.control_password:
-#             data["control_login"] = self.control_login
-#             data["control_password"] = self.control_password
-
-#         if self.session is None:
-#             self.session = ClientSession()
-#             self._close_session = True
-
-#         kwargs = {
-#             "headers": headers,
-#             "params": params,
-#             "json": data,
-#         }
-
-#         try:
-#             async with asyncio.timeout(self.request_timeout):
-#                 response = await self.session.request(METH_POST, url, **kwargs)
-#         except asyncio.TimeoutError as exception:
-#             msg = "Timeout occurred while connecting to TSmart"
-#             raise TSmartConnectionError(msg) from exception
-
-#         if response.status == 400:
-#             text = await response.text()
-#             msg = "Bad request to TSmart"
-#             raise TSmartBadRequestError(
-#                 msg,
-#                 {"response": text},
-#             )
-
-#         if response.status == 401:
-#             msg = "Unauthorized access to TSmart"
-#             raise TSmartAuthenticationError(msg)
-
-#         if response.status == 422:
-#             text = await response.text()
-#             msg = "TSmart validation error"
-#             raise TSmartValidationError(
-#                 msg,
-#                 {"response": text},
-#             )
-
-#         if response.status == 404:
-#             text = await response.text()
-#             msg = "Command not found in TSmart"
-#             raise TSmartNotFoundError(
-#                 msg,
-#                 {"response": text},
-#             )
-
-#         content_type = response.headers.get("Content-Type", "")
-
-#         if "application/json" not in content_type:
-#             text = await response.text()
-#             msg = "Unexpected response from TSmart"
-#             raise TSmartError(
-#                 msg,
-#                 {"Content-Type": content_type, "response": text},
-#             )
-
-#         return await response.text()
-
-#     async def get_info(
-#         self,
-#     ) -> InfoResponse:
-#         """Get info."""
-#         response = await self._request("broadband/info")
-
-#         info_response = InfoResponse.from_json(response)
-#         if info_response.error:
-#             if info_response.error == "Control authorisation failed":
-#                 raise TSmartAuthenticationError
-#             raise TSmartError(info_response.error)
-#         return info_response
-
-#     async def close(self) -> None:
-#         """Close open client session."""
-#         if self.session and self._close_session:
-#             await self.session.close()

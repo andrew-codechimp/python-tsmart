@@ -13,10 +13,6 @@ class TSmartTimeoutError(TSmartError):
     """TSmart timeout exception."""
 
 
-class TSmartValidationError(TSmartError):
-    """TSmart validation exception."""
-
-
 class TSmartNotFoundError(TSmartError):
     """TSmart not found exception."""
 
