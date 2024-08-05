@@ -1,7 +1,7 @@
 """Asynchronous Python client for TSmart."""
 
 from aiotsmart.exceptions import (
-    TSmartBadRequestError,
+    TSmartNoResponseError,
     TSmartConnectionError,
     TSmartError,
     TSmartNotFoundError,
@@ -12,7 +12,7 @@ from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.tsmart import TSmart
 
 __all__ = [
-    "TSmartBadRequestError",
+    "TSmartNoResponseError",
     "TSmartConnectionError",
     "TSmartError",
     "TSmartNotFoundError",

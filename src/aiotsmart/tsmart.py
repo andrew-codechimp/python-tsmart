@@ -3,24 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from importlib import metadata
 import logging
 import socket
 import struct
-from typing import Any, Self
+from typing import Self
 
 import asyncio_dgram
-from yarl import URL
 
-from aiotsmart.exceptions import (
-    TSmartBadRequestError,
-    TSmartConnectionError,
-    TSmartError,
-    TSmartNotFoundError,
-    TSmartTimeoutError,
-    TSmartValidationError,
-)
-from aiotsmart.models import Configuration, Discovery, Mode, Status
+from aiotsmart.exceptions import TSmartTimeoutError, TSmartNoResponseError
+from aiotsmart.models import Configuration, Mode, Status
 
 VERSION = metadata.version(__package__)
 
@@ -29,6 +22,7 @@ UDP_PORT = 1337
 _LOGGER = logging.getLogger(__name__)
 
 
+@dataclass
 class TSmart:
     """TSmart Client."""
 
@@ -55,7 +49,7 @@ class TSmart:
         devices = {}
 
         data = None
-        for i in range(tries):
+        for _ in range(tries):
             message = struct.pack("=BBBB", 0x01, 0, 0, 0x01 ^ 0x55)
 
             await stream.send(message, ("255.255.255.255", UDP_PORT))
@@ -121,8 +115,9 @@ class TSmart:
                         if stop_on_first:
                             break
 
-                except asyncio.exceptions.TimeoutError:
-                    break
+                except asyncio.exceptions.TimeoutError as exception:
+                    msg = "Timeout occurred while connecting to immersion heater"
+                    raise TSmartTimeoutError(msg) from exception
 
             if stop_on_first and len(devices) > 0:
                 break
@@ -151,13 +146,13 @@ class TSmart:
         stream = await asyncio_dgram.from_socket(sock)
 
         data = None
-        for i in range(2):
+        for _ in range(2):
             await stream.send(request)
 
             _LOGGER.info("Message sent to %s" % self.ip)
 
             try:
-                data, remote_addr = await asyncio.wait_for(stream.recv(), 2)
+                data, _ = await asyncio.wait_for(stream.recv(), 2)
                 if len(data) != response_struct.size:
                     _LOGGER.warning(
                         "Unexpected packet length (got: %d, expected: %d)"
@@ -190,12 +185,14 @@ class TSmart:
         stream.close()
 
         if data is None:
-            raise TSmartTimeoutError()
+            raise TSmartTimeoutError(
+                "Timeout occurred while connecting to immersion heater"
+            )
 
         self.request_successful = True
         return data
 
-    async def async_get_configuration(self) -> Configuration | None:
+    async def async_get_configuration(self) -> Configuration:
         """Get configuration from immersion heater."""
 
         _LOGGER.info("Async get configuration")
@@ -205,8 +202,9 @@ class TSmart:
         response = await self._async_request(request, response_struct)
 
         if response is None:
-            return None
+            raise TSmartNoResponseError("No response received")
 
+        # pylint:disable=unused-variable
         (
             cmd,
             sub,
@@ -237,7 +235,10 @@ class TSmart:
 
         return configuration
 
-    async def async_get_status(self) -> Status | None:
+    # pylint:disable=too-many-locals
+    async def async_get_status(self) -> Status:
+        """Get status from the immersion heater."""
+
         _LOGGER.info("Async get status")
         request = struct.pack("=BBBB", 0xF1, 0, 0, 0)
 
@@ -245,7 +246,7 @@ class TSmart:
         response = await self._async_request(request, response_struct)
 
         if response is None:
-            return
+            raise TSmartNoResponseError("No response received")
 
         # pylint:disable=unused-variable
         (
@@ -278,6 +279,8 @@ class TSmart:
         return status
 
     async def async_control_set(self, power, mode, setpoint):
+        """Set the immersion heater."""
+
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))
 
         if mode < 0 or mode > 5:
@@ -289,6 +292,23 @@ class TSmart:
 
         response_struct = struct.Struct("=BBBB")
         response = await self._async_request(request, response_struct)
+
+    async def __aenter__(self) -> Self:
+        """Async enter.
+
+        Returns
+        -------
+            The TSmartClient object.
+        """
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        """Async exit.
+
+        Args:
+        ----
+            _exc_info: Exec type.
+        """
 
 
 # @dataclass
@@ -397,21 +417,3 @@ class TSmart:
 #         """Close open client session."""
 #         if self.session and self._close_session:
 #             await self.session.close()
-
-#     async def __aenter__(self) -> Self:
-#         """Async enter.
-
-#         Returns
-#         -------
-#             The TSmartClient object.
-#         """
-#         return self
-
-#     async def __aexit__(self, *_exc_info: object) -> None:
-#         """Async exit.
-
-#         Args:
-#         ----
-#             _exc_info: Exec type.
-#         """
-#         await self.close()

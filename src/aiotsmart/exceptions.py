@@ -21,5 +21,5 @@ class TSmartNotFoundError(TSmartError):
     """TSmart not found exception."""
 
 
-class TSmartBadRequestError(TSmartError):
-    """TSmart bad request exception."""
+class TSmartNoResponseError(TSmartError):
+    """TSmart no response exception."""

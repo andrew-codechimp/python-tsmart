@@ -120,6 +120,8 @@ disable = [
   "too-many-arguments",
   "too-many-public-methods",
   "wrong-import-order",
+  "logging-not-lazy",
+  "consider-using-f-string",
 ]
 
 [tool.pylint.SIMILARITIES]
