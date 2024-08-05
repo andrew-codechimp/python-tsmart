@@ -11,8 +11,12 @@ client = TSmart("192.168.1.35")
 async def do_stuff():
     """Test."""
 
-    configuration = await client.async_get_configuration()
-    pprint(vars(configuration))
+    # configuration = await client.async_get_configuration()
+    # pprint(vars(configuration))
+
+    devices = await client.async_discover(timeout=2)
+
+    print(devices)
 
     # try:
     #     status = await client.async_get_status()

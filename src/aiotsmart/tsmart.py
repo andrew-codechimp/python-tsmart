@@ -8,7 +8,7 @@ from importlib import metadata
 import logging
 import socket
 import struct
-from typing import Self
+from typing import Self, Any
 
 import asyncio_dgram
 
@@ -18,7 +18,7 @@ from aiotsmart.exceptions import (
     TSmartNotFoundError,
     TSmartTimeoutError,
 )
-from aiotsmart.models import Configuration, Mode, Status
+from aiotsmart.models import Configuration, Mode, Status, Discovery
 
 VERSION = metadata.version(__package__)
 
@@ -31,20 +31,27 @@ _LOGGER = logging.getLogger(__name__)
 class TSmart:
     """TSmart Client."""
 
-    def __init__(self, ip, device_id=None, name=None):
+    def __init__(self, ip=None, device_id=None, name=None):
         self.ip = ip
         self.device_id = device_id
         self.name = name
 
         self.request_successful = False
 
-    async def async_discover(self, stop_on_first=False, tries=2, timeout=2):
+    # pylint:disable=too-many-locals
+    async def async_discover(
+        self, stop_on_first=False, tries=2, timeout=2
+    ) -> dict[Any, Discovery]:
         """Broadcast discovery packet."""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
+        )  # Internet, UDP
 
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("", 1337))
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
+        sock.bind(("", UDP_PORT))
 
         _LOGGER.info("Performing discovery")
 
@@ -114,15 +121,14 @@ class TSmart:
                         device_name = name.decode("utf-8").split("\x00")[0]
                         device_id_str = f"{device_id:04X}"
                         _LOGGER.info("Discovered %s %s" % (device_id_str, device_name))
-                        devices[remote_addr[0]] = TSmart(
+                        devices[remote_addr[0]] = Discovery(
                             remote_addr[0], device_id_str, device_name
                         )
                         if stop_on_first:
                             break
 
-                except asyncio.exceptions.TimeoutError as exception:
-                    msg = "Timeout occurred while connecting to immersion heater"
-                    raise TSmartTimeoutError(msg) from exception
+                except asyncio.exceptions.TimeoutError:
+                    break
 
             if stop_on_first and len(devices) > 0:
                 break
