@@ -1,0 +1,20 @@
+# serializer version: 1
+# name: test_get_configuration
+  dict({
+    'device_id': '9B2A0D',
+    'device_name': 'TESLA',
+    'firmware_name': 'Boiler',
+    'firmware_version': '1.9.96',
+  })
+# ---
+# name: test_get_status
+  dict({
+    'mode': <Mode.MANUAL: 0>,
+    'power': False,
+    'relay': False,
+    'setpoint': 10.0,
+    'temperature_average': 50.95,
+    'temperature_high': 48.0,
+    'temperature_low': 53.9,
+  })
+# ---
