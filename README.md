@@ -99,8 +99,6 @@ This library is in no way approved, endorsed or supported by Tesla UK Ltd.
 
 ## Acknowledgements
 
-
-
 <details>
     <summary>This library builds upon the great work by Paul Warren</summary>
     MIT License
