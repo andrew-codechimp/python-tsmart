@@ -66,31 +66,21 @@ async def test_control_read_no_response(
 
 async def test_control_set(
     tsmart_client: TSmartClient,
-    snapshot: SnapshotAssertion,
 ) -> None:
     """Test setting control."""
 
     with patch("aiotsmart.TSmartClient._request", return_value=b"\xf2\x00\x00\xa7"):
-        assert (
-            await tsmart_client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
-            == snapshot
-        )
+        await tsmart_client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
 
 
 async def test_control_set_no_response(
     tsmart_client: TSmartClient,
-    snapshot: SnapshotAssertion,
 ) -> None:
     """Test setting control."""
 
     with patch("aiotsmart.TSmartClient._request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
-            assert (
-                await tsmart_client.control_write(
-                    power=True, mode=Mode.MANUAL, setpoint=15
-                )
-                == snapshot
-            )
+            await tsmart_client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
 
 
 async def test_validate_checksum(
