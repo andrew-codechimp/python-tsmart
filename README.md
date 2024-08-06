@@ -43,12 +43,6 @@ client = TSmartClient(YOUR_IP)
 status = await client.async_get_status()
 print(status)
 
-    try:
-        status = await client.async_get_status()
-        pprint(vars(status))
-    except TSmartConnectionError as exception:
-        print(repr(exception))
-
 # Set
 client = TSmartClient(YOUR_IP)
 await client.async_control_set(power=True, mode=Mode.MANUAL, setpoint=30)
