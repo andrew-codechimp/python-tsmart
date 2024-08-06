@@ -1,4 +1,7 @@
 # serializer version: 1
+# name: test_control_set
+  None
+# ---
 # name: test_get_configuration
   dict({
     'device_id': '9B2A0D',

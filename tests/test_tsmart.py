@@ -10,7 +10,7 @@ import pytest
 from aiotsmart.exceptions import (
     TSmartNoResponseError,
 )
-from aiotsmart.tsmart import TSmartClient
+from aiotsmart.tsmart import TSmartClient, Mode
 
 if TYPE_CHECKING:
     from syrupy import SnapshotAssertion
@@ -62,3 +62,36 @@ async def test_get_status_no_response(
     with patch("aiotsmart.TSmartClient._async_request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
             assert await tsmart_client.async_get_status() == snapshot
+
+
+async def test_control_set(
+    tsmart_client: TSmartClient,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test setting control."""
+
+    with patch(
+        "aiotsmart.TSmartClient._async_request", return_value=b"\xf2\x00\x00\xa7"
+    ):
+        assert (
+            await tsmart_client.async_control_set(
+                power=True, mode=Mode.MANUAL, setpoint=15
+            )
+            == snapshot
+        )
+
+
+async def test_control_set_no_response(
+    tsmart_client: TSmartClient,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test setting control."""
+
+    with patch("aiotsmart.TSmartClient._async_request", return_value=None):
+        with pytest.raises(TSmartNoResponseError):
+            assert (
+                await tsmart_client.async_control_set(
+                    power=True, mode=Mode.MANUAL, setpoint=15
+                )
+                == snapshot
+            )

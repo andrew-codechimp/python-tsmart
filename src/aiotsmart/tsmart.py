@@ -301,9 +301,6 @@ class TSmartClient:
 
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))
 
-        if mode < 0 or mode > 5:
-            raise ValueError("Invalid mode")
-
         request = struct.pack(
             "=BBBBHBB", 0xF2, 0, 0, 1 if power else 0, setpoint * 10, mode, 0
         )
