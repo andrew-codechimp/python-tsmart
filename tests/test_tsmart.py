@@ -16,52 +16,52 @@ if TYPE_CHECKING:
     from syrupy import SnapshotAssertion
 
 
-async def test_get_configuration(
+async def test_configuration_read(
     tsmart_client: TSmartClient,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test retrieving configuration."""
 
     with patch(
-        "aiotsmart.TSmartClient._async_request",
+        "aiotsmart.TSmartClient._request",
         return_value=b"!\x00\x00 \x00\r*\x9b\x00TESLA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00d\x00\x01\t`Boiler\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\xff\xff\x01\x01\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\xff\xff\xff\xff\x00\x00wifissid\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00wifipassword\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xd0!\xf9\xb1\xd6QTESLA_74BA1D\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\x01\xa7\x1e\x00\x00\x00\x00\x00\x04d\x00\t\x00\x00\x00\x01\x00\x00\x00n",
     ):
-        assert await tsmart_client.async_get_configuration() == snapshot
+        assert await tsmart_client.configuration_read() == snapshot
 
 
-async def test_get_configuration_no_response(
+async def test_configuration_read_no_response(
     tsmart_client: TSmartClient,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test retrieving no response from configuration."""
 
-    with patch("aiotsmart.TSmartClient._async_request", return_value=None):
+    with patch("aiotsmart.TSmartClient._request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
-            assert await tsmart_client.async_get_configuration() == snapshot
+            assert await tsmart_client.configuration_read() == snapshot
 
 
-async def test_get_status(
+async def test_control_read(
     tsmart_client: TSmartClient,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test retrieving status."""
 
     with patch(
-        "aiotsmart.TSmartClient._async_request",
+        "aiotsmart.TSmartClient._request",
         return_value=b"\xf1\x00\x00\x00d\x00\x00\xe0\x01\x00\x01\x1b\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x009",
     ):
-        assert await tsmart_client.async_get_status() == snapshot
+        assert await tsmart_client.control_read() == snapshot
 
 
-async def test_get_status_no_response(
+async def test_control_read_no_response(
     tsmart_client: TSmartClient,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test retrieving no response from status."""
 
-    with patch("aiotsmart.TSmartClient._async_request", return_value=None):
+    with patch("aiotsmart.TSmartClient._request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
-            assert await tsmart_client.async_get_status() == snapshot
+            assert await tsmart_client.control_read() == snapshot
 
 
 async def test_control_set(
@@ -70,13 +70,9 @@ async def test_control_set(
 ) -> None:
     """Test setting control."""
 
-    with patch(
-        "aiotsmart.TSmartClient._async_request", return_value=b"\xf2\x00\x00\xa7"
-    ):
+    with patch("aiotsmart.TSmartClient._request", return_value=b"\xf2\x00\x00\xa7"):
         assert (
-            await tsmart_client.async_control_set(
-                power=True, mode=Mode.MANUAL, setpoint=15
-            )
+            await tsmart_client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
             == snapshot
         )
 
@@ -87,10 +83,10 @@ async def test_control_set_no_response(
 ) -> None:
     """Test setting control."""
 
-    with patch("aiotsmart.TSmartClient._async_request", return_value=None):
+    with patch("aiotsmart.TSmartClient._request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
             assert (
-                await tsmart_client.async_control_set(
+                await tsmart_client.control_write(
                     power=True, mode=Mode.MANUAL, setpoint=15
                 )
                 == snapshot

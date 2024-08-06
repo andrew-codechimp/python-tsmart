@@ -1,8 +1,5 @@
 # serializer version: 1
-# name: test_control_set
-  None
-# ---
-# name: test_get_configuration
+# name: test_configuration_read
   dict({
     'device_id': '9B2A0D',
     'device_name': 'TESLA',
@@ -10,7 +7,7 @@
     'firmware_version': '1.9.96',
   })
 # ---
-# name: test_get_status
+# name: test_control_read
   dict({
     'mode': <Mode.MANUAL: 0>,
     'power': False,
@@ -20,4 +17,7 @@
     'temperature_high': 48.0,
     'temperature_low': 53.9,
   })
+# ---
+# name: test_control_set
+  None
 # ---

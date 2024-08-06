@@ -35,7 +35,7 @@ class TSmartClient:
     ip: str | None = None
 
     # pylint:disable=too-many-locals
-    async def async_discover(
+    async def discover(
         self, stop_on_first: bool = False, tries: int = 2, timeout: int = 2
     ) -> list[Discovery]:
         """Broadcast discovery packet."""
@@ -136,9 +136,7 @@ class TSmartClient:
 
         return list(devices.values())
 
-    async def _async_request(
-        self, request: bytes, response_struct: struct.Struct
-    ) -> bytes:
+    async def _request(self, request: bytes, response_struct: struct.Struct) -> bytes:
         assert self.ip is not None
 
         t = 0
@@ -215,14 +213,14 @@ class TSmartClient:
             t = t ^ b
         return t ^ 0x55 == data[-1]
 
-    async def async_get_configuration(self) -> Configuration:
+    async def configuration_read(self) -> Configuration:
         """Get configuration from immersion heater."""
 
         _LOGGER.info("Async get configuration")
         request = struct.pack("=BBBB", 0x21, 0, 0, 0)
 
         response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
-        response = await self._async_request(request, response_struct)
+        response = await self._request(request, response_struct)
 
         if response is None:
             raise TSmartNoResponseError("No response received")
@@ -259,14 +257,14 @@ class TSmartClient:
         return configuration
 
     # pylint:disable=too-many-locals
-    async def async_get_status(self) -> Status:
+    async def control_read(self) -> Status:
         """Get status from the immersion heater."""
 
         _LOGGER.info("Async get status")
         request = struct.pack("=BBBB", 0xF1, 0, 0, 0)
 
         response_struct = struct.Struct("=BBBBHBHBBH16sB")
-        response = await self._async_request(request, response_struct)
+        response = await self._request(request, response_struct)
 
         if response is None:
             raise TSmartNoResponseError("No response received")
@@ -301,7 +299,7 @@ class TSmartClient:
 
         return status
 
-    async def async_control_set(self, power: bool, mode: Mode, setpoint: int) -> None:
+    async def control_write(self, power: bool, mode: Mode, setpoint: int) -> None:
         """Set the immersion heater."""
 
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))
@@ -311,7 +309,7 @@ class TSmartClient:
         )
 
         response_struct = struct.Struct("=BBBB")
-        response = await self._async_request(request, response_struct)
+        response = await self._request(request, response_struct)
         if response != b"\xf2\x00\x00\xa7":
             raise TSmartNoResponseError
 

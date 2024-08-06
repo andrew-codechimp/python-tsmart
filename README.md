@@ -30,22 +30,22 @@ from aiotsmart.tsmart import TSmartClient, Mode
 
 # Discovery
 client = TSmartClient()
-devices = await client.async_discover(timeout=2)
+devices = await client.discover(timeout=2)
 print(devices)
 
 # Configuration
 client = TSmartClient(YOUR_IP)
-configuration = await client.async_get_configuration()
+configuration = await client.configuration_read()
 print(configuration)
 
 # Status
 client = TSmartClient(YOUR_IP)
-status = await client.async_get_status()
+status = await client.control_read()
 print(status)
 
 # Set
 client = TSmartClient(YOUR_IP)
-await client.async_control_set(power=True, mode=Mode.MANUAL, setpoint=30)
+await client.control_write(power=True, mode=Mode.MANUAL, setpoint=30)
 ```
 
 ## Changelog & Releases
