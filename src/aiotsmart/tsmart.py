@@ -8,9 +8,10 @@ from importlib import metadata
 import logging
 import socket
 import struct
-from typing import Self, Any
+from typing import cast, Self
 
 import asyncio_dgram
+from asyncio_dgram.aio import DatagramClient, DatagramServer
 
 from aiotsmart.exceptions import (
     TSmartConnectionError,
@@ -28,20 +29,15 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
-class TSmart:
+class TSmartClient:
     """TSmart Client."""
 
-    def __init__(self, ip=None, device_id=None, name=None):
-        self.ip = ip
-        self.device_id = device_id
-        self.name = name
-
-        self.request_successful = False
+    ip: str | None = None
 
     # pylint:disable=too-many-locals
     async def async_discover(
-        self, stop_on_first=False, tries=2, timeout=2
-    ) -> dict[Any, Discovery]:
+        self, stop_on_first: bool = False, tries: int = 2, timeout: int = 2
+    ) -> list[Discovery]:
         """Broadcast discovery packet."""
         sock = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -55,7 +51,7 @@ class TSmart:
 
         _LOGGER.info("Performing discovery")
 
-        stream = await asyncio_dgram.from_socket(sock)
+        stream = cast(DatagramServer, await asyncio_dgram.from_socket(sock))
         response_struct = struct.Struct("=BBBHL32sBB")
 
         devices = {}
@@ -64,13 +60,15 @@ class TSmart:
         for _ in range(tries):
             message = struct.pack("=BBBB", 0x01, 0, 0, 0x01 ^ 0x55)
 
-            await stream.send(message, ("255.255.255.255", UDP_PORT))
+            await stream.send(data=message, addr=("255.255.255.255", UDP_PORT))
 
             _LOGGER.info("Discovery message sent")
 
             while True:
                 try:
                     data, remote_addr = await asyncio.wait_for(stream.recv(), timeout)
+                    remote_addr_ip = cast(tuple[str, int], remote_addr)[0]
+
                     if len(data) == len(message):
                         # Got our own broadcast
                         continue
@@ -104,10 +102,10 @@ class TSmart:
                         _LOGGER.warning("Received packet checksum failed")
                         continue
 
-                    _LOGGER.info("Got response from %s" % remote_addr[0])
+                    _LOGGER.info("Got response from %s", remote_addr_ip)
 
                     # pylint:disable=unused-variable
-                    if remote_addr[0] not in devices:
+                    if remote_addr_ip not in devices:
                         (
                             cmd,
                             sub,
@@ -121,8 +119,8 @@ class TSmart:
                         device_name = name.decode("utf-8").split("\x00")[0]
                         device_id_str = f"{device_id:04X}"
                         _LOGGER.info("Discovered %s %s" % (device_id_str, device_name))
-                        devices[remote_addr[0]] = Discovery(
-                            remote_addr[0], device_id_str, device_name
+                        devices[remote_addr_ip] = Discovery(
+                            remote_addr_ip, device_id_str, device_name
                         )
                         if stop_on_first:
                             break
@@ -134,13 +132,14 @@ class TSmart:
                 break
 
         stream.close()
+        sock.close()
 
-        return devices.values()
+        return list(devices.values())
 
     async def _async_request(
         self, request: bytes, response_struct: struct.Struct
     ) -> bytes:
-        self.request_successful = False
+        assert self.ip is not None
 
         t = 0
         request = bytearray(request)
@@ -155,7 +154,7 @@ class TSmart:
             sock.bind(("", 1337))
             sock.connect((self.ip, UDP_PORT))
 
-            stream = await asyncio_dgram.from_socket(sock)
+            stream = cast(DatagramClient, await asyncio_dgram.from_socket(sock))
         except OSError as exception:
             msg = exception.strerror
             if exception.errno == 8:
@@ -166,7 +165,7 @@ class TSmart:
 
         data = None
         for _ in range(2):
-            await stream.send(request)
+            await stream.send(data=request)
 
             _LOGGER.info("Message sent to %s" % self.ip)
 
@@ -202,13 +201,13 @@ class TSmart:
             break
 
         stream.close()
+        sock.close()
 
         if data is None:
             raise TSmartTimeoutError(
                 "Timeout occurred while connecting to immersion heater"
             )
 
-        self.request_successful = True
         return data
 
     async def async_get_configuration(self) -> Configuration:
@@ -297,7 +296,7 @@ class TSmart:
 
         return status
 
-    async def async_control_set(self, power: bool, mode: Mode, setpoint: int):
+    async def async_control_set(self, power: bool, mode: Mode, setpoint: int) -> None:
         """Set the immersion heater."""
 
         _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))

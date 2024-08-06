@@ -42,10 +42,10 @@ class Configuration:
 class Status:
     """Status model."""
 
-    power: str
+    power: bool
     setpoint: str
-    mode: str
+    mode: Mode
     temperature_high: str
     temperature_low: str
     temperature_average: str
-    relay: str
+    relay: bool

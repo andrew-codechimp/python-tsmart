@@ -26,9 +26,32 @@ pip install aiotsmart
 
 ## Usage
 ```python
-from aiotsmart.tsmart import TSmartClient
+from aiotsmart.tsmart import TSmartClient, Mode
 
+# Discovery
+client = TSmartClient()
+devices = await client.async_discover(timeout=2)
+print(devices)
 
+# Configuration
+client = TSmartClient(YOUR_IP)
+configuration = await client.async_get_configuration()
+print(configuration)
+
+# Status
+client = TSmartClient(YOUR_IP)
+status = await client.async_get_status()
+print(status)
+
+    try:
+        status = await client.async_get_status()
+        pprint(vars(status))
+    except TSmartConnectionError as exception:
+        print(repr(exception))
+
+# Set
+client = TSmartClient(YOUR_IP)
+await client.async_control_set(power=True, mode=Mode.MANUAL, setpoint=30)
 ```
 
 ## Changelog & Releases
