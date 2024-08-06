@@ -99,7 +99,7 @@ async def test_control_set_no_response(
 
 async def test_validate_checksum(
     tsmart_client: TSmartClient,
-):
+) -> None:
     """Test the checksum validation"""
 
     # pylint:disable=protected-access
