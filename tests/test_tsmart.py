@@ -95,3 +95,13 @@ async def test_control_set_no_response(
                 )
                 == snapshot
             )
+
+
+async def test_validate_checksum(
+    tsmart_client: TSmartClient,
+):
+    """Test the checksum validation"""
+
+    # pylint:disable=protected-access
+    assert tsmart_client._validate_checksum(b"\xf2\x00\x00\xa7")
+    assert not tsmart_client._validate_checksum(b"\xf2\xaa\xaa\xaa")
