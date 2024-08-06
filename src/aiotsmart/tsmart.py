@@ -95,10 +95,7 @@ class TSmartClient:
                         )
                         continue
 
-                    t = 0
-                    for b in data[:-1]:
-                        t = t ^ b
-                    if t ^ 0x55 != data[-1]:
+                    if not self._validate_checksum(data):
                         _LOGGER.warning("Received packet checksum failed")
                         continue
 
