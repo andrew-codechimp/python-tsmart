@@ -22,11 +22,13 @@ from aiotsmart.exceptions import (
 from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.util import validate_checksum
 
+from .const import MESSAGE_HEADER
+
 VERSION = metadata.version(__package__)
 
 UDP_PORT = 1337
 DISCOVERY_INTERVAL = 2  # seconds
-DISCOVERY_MESSAGE = struct.pack("=BBBB", 0x01, 0, 0, 0x01 ^ 0x55)
+DISCOVERY_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
 BROADCAST_ADDR = ("255.255.255.255", UDP_PORT)
 
 _LOGGER = logging.getLogger(__name__)
@@ -211,7 +213,7 @@ class TSmartClient:
         """Get configuration from immersion heater."""
 
         _LOGGER.info("Async get configuration")
-        request = struct.pack("=BBBB", 0x21, 0, 0, 0)
+        request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
 
         response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
         response = await self._request(request, response_struct)
@@ -255,7 +257,7 @@ class TSmartClient:
         """Get status from the immersion heater."""
 
         _LOGGER.info("Async get status")
-        request = struct.pack("=BBBB", 0xF1, 0, 0, 0)
+        request = struct.pack(MESSAGE_HEADER, 0xF1, 0, 0, 0)
 
         response_struct = struct.Struct("=BBBBHBHBBH16sB")
         response = await self._request(request, response_struct)
@@ -302,7 +304,7 @@ class TSmartClient:
             "=BBBBHBB", 0xF2, 0, 0, 1 if power else 0, setpoint * 10, mode, 0
         )
 
-        response_struct = struct.Struct("=BBBB")
+        response_struct = struct.Struct(MESSAGE_HEADER)
         response = await self._request(request, response_struct)
         if response != b"\xf2\x00\x00\xa7":
             raise TSmartNoResponseError

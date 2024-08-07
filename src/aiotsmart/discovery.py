@@ -12,9 +12,11 @@ from typing import Any, Callable
 from aiotsmart.models import DiscoveredDevice
 from aiotsmart.util import validate_checksum
 
+from .const import MESSAGE_HEADER
+
 UDP_PORT = 1337
 DISCOVERY_INTERVAL = 2  # seconds
-DISCOVERY_MESSAGE = struct.pack("=BBBB", 0x01, 0, 0, 0x01 ^ 0x55)
+DISCOVERY_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
 BROADCAST_ADDR = ("255.255.255.255", UDP_PORT)
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +49,7 @@ def _unpack_discovery_response(
         _LOGGER.debug("Got error response (code %d)" % (data[0]))
         return None
 
-    if data[0] != DISCOVERY_MESSAGE[0] or data[1] != data[1] or data[2] != data[2]:
+    if data[0] != DISCOVERY_MESSAGE[0]:
         _LOGGER.debug(
             "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
         )
