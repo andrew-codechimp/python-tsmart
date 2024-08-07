@@ -20,7 +20,7 @@ class Mode(IntEnum):
 
 
 @dataclass
-class Discovery:
+class DiscoveredDevice:
     """Discovery model."""
 
     ip_address: str

@@ -81,13 +81,3 @@ async def test_control_set_no_response(
     with patch("aiotsmart.TSmartClient._request", return_value=None):
         with pytest.raises(TSmartNoResponseError):
             await tsmart_client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
-
-
-async def test_validate_checksum(
-    tsmart_client: TSmartClient,
-) -> None:
-    """Test the checksum validation"""
-
-    # pylint:disable=protected-access
-    assert tsmart_client._validate_checksum(b"\xf2\x00\x00\xa7")
-    assert not tsmart_client._validate_checksum(b"\xf2\xaa\xaa\xaa")

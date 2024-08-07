@@ -7,10 +7,12 @@ from aiotsmart.exceptions import (
     TSmartNotFoundError,
     TSmartTimeoutError,
 )
-from aiotsmart.models import Configuration, Discovery, Mode, Status
+from aiotsmart.discovery import TSmartDiscovery
+from aiotsmart.models import Configuration, DiscoveredDevice, Mode, Status
 from aiotsmart.tsmart import TSmartClient
 
 __all__ = [
+    "TSmartDiscovery",
     "TSmartNoResponseError",
     "TSmartConnectionError",
     "TSmartError",
@@ -18,7 +20,7 @@ __all__ = [
     "TSmartTimeoutError",
     "TSmartClient",
     "Configuration",
-    "Discovery",
+    "DiscoveredDevice",
     "Status",
     "Mode",
 ]

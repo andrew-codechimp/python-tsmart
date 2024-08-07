@@ -29,8 +29,8 @@ pip install aiotsmart
 from aiotsmart.tsmart import TSmartClient, Mode
 
 # Discovery
-client = TSmartClient()
-devices = await client.discover(timeout=2)
+discovery = TSmartDiscovery()
+devices = await discovery.discover()
 print(devices)
 
 # Configuration
