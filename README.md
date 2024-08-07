@@ -26,7 +26,7 @@ pip install aiotsmart
 
 ## Usage
 ```python
-from aiotsmart.tsmart import TSmartClient, Mode
+from aiotsmart.tsmart import TSmartClient, TSmartDiscovery, Mode
 
 # Discovery
 discovery = TSmartDiscovery()

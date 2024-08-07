@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 import logging
 import socket
 import struct
-from typing import Any, Callable
+from typing import Any, Callable, Self
 
 from aiotsmart.models import DiscoveredDevice
 from aiotsmart.util import validate_checksum
@@ -171,3 +171,20 @@ class TSmartDiscovery:
             transport.close()
 
         return self._discovered_devices
+
+    async def __aenter__(self) -> Self:
+        """Async enter.
+
+        Returns
+        -------
+            The TSmartClient object.
+        """
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        """Async exit.
+
+        Args:
+        ----
+            _exc_info: Exec type.
+        """

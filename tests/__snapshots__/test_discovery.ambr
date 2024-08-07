@@ -1,4 +1,4 @@
 # serializer version: 1
 # name: test_discovery
-  "TSmartDiscovery.discover(self) -> 'list[DiscoveredDevice]'"
+  <bound method TSmartDiscovery.discover of TSmartDiscovery(_discovered_devices=[])>
 # ---
