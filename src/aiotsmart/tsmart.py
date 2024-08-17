@@ -8,7 +8,7 @@ from importlib import metadata
 import logging
 import socket
 import struct
-from typing import cast, Self
+from typing import Any, Callable, Self, cast
 
 import asyncio_dgram
 from asyncio_dgram.aio import DatagramClient
@@ -28,10 +28,102 @@ VERSION = metadata.version(__package__)
 
 UDP_PORT = 1337
 DISCOVERY_INTERVAL = 2  # seconds
-DISCOVERY_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
+CONFIGURATION_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
 BROADCAST_ADDR = ("255.255.255.255", UDP_PORT)
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# pylint:disable=too-many-locals
+def _unpack_configuration_response(data: bytes) -> Configuration | None:
+    """Return unpacked configuration response from TSmart Immersion Heater."""
+    response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
+
+    if len(data) == len(CONFIGURATION_MESSAGE):
+        # Got our own broadcast
+        return None
+
+    if len(data) != response_struct.size:
+        _LOGGER.debug(
+            "Unexpected packet length (got: %d, expected: %d)"
+            % (len(data), response_struct.size)
+        )
+        return None
+
+    if data[0] == 0:
+        _LOGGER.debug("Got error response (code %d)" % (data[0]))
+        return None
+
+    if data[0] != CONFIGURATION_MESSAGE[0]:
+        _LOGGER.debug(
+            "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
+        )
+        return None
+
+    if not validate_checksum(data):
+        _LOGGER.debug("Received packet checksum failed")
+        return None
+
+    # pylint:disable=unused-variable
+    (
+        cmd,
+        sub,
+        sub2,
+        device_type,
+        device_id,
+        device_name,
+        tz,
+        userbin,
+        firmware_version_major,
+        firmware_version_minor,
+        firmware_version_deployment,
+        firmware_name,
+        legacy,
+        wifi_ssid,
+        wifi_password,
+        unused,
+    ) = response_struct.unpack(data)
+
+    configuration = Configuration(
+        device_id=f"{device_id:04X}",
+        device_name=device_name.decode("utf-8").split("\x00")[0],
+        firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
+        firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
+    )
+    _LOGGER.info(
+        "Configuration received %s %s"
+        % (configuration.device_id, configuration.device_name)
+    )
+
+    return configuration
+
+
+class ConfigurationProtocol(asyncio.DatagramProtocol):
+    """Protocol to send configuration request and receive responses."""
+
+    def __init__(self) -> None:
+        """Initialize with callback function."""
+        self.transport = None
+        self.done = asyncio.get_running_loop().create_future()
+
+    def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
+        """Test if responder is a TSmart Immersion Heater."""
+        _LOGGER.debug("Received configuration response from %s", addr)
+        response = _unpack_configuration_response(data)
+
+        if response:
+            if (
+                "device_id" not in response
+                or "device_name" not in response
+                or "firmware_version" not in response
+                or "firmware_name" not in response
+            ):
+                _LOGGER.info(
+                    "TSmart configuration response %s does not contain enough information",
+                    response,
+                )
+
+            self.done.set_result(response)
 
 
 @dataclass
@@ -39,106 +131,6 @@ class TSmartClient:
     """TSmart Client."""
 
     ip_address: str
-
-    # # pylint:disable=too-many-locals
-    # async def discover_old(
-    #     self, stop_on_first: bool = False, tries: int = 2, timeout: int = 2
-    # ) -> list[DiscoveredDevice]:
-    #     """Broadcast discovery packet."""
-    #     sock = socket.socket(
-    #         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
-    #     )  # Internet, UDP
-
-    #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-
-    #     sock.bind(("", UDP_PORT))
-
-    #     _LOGGER.info("Performing discovery")
-
-    #     stream = cast(DatagramServer, await asyncio_dgram.from_socket(sock))
-    #     response_struct = struct.Struct("=BBBHL32sBB")
-
-    #     devices = {}
-
-    #     data = None
-    #     for _ in range(tries):
-
-    #         await stream.send(
-    #             data=DISCOVERY_MESSAGE, addr=("255.255.255.255", UDP_PORT)
-    #         )
-
-    #         _LOGGER.info("Discovery message sent")
-
-    #         while True:
-    #             try:
-    #                 data, remote_addr = await asyncio.wait_for(stream.recv(), timeout)
-    #                 remote_addr_ip = cast(tuple[str, int], remote_addr)[0]
-
-    #                 if len(data) == len(DISCOVERY_MESSAGE):
-    #                     # Got our own broadcast
-    #                     continue
-
-    #                 if len(data) != response_struct.size:
-    #                     _LOGGER.warning(
-    #                         "Unexpected packet length (got: %d, expected: %d)"
-    #                         % (len(data), response_struct.size)
-    #                     )
-    #                     continue
-
-    #                 if data[0] == 0:
-    #                     _LOGGER.warning("Got error response (code %d)" % (data[0]))
-    #                     continue
-
-    #                 if (
-    #                     data[0] != DISCOVERY_MESSAGE[0]
-    #                     or data[1] != data[1]
-    #                     or data[2] != data[2]
-    #                 ):
-    #                     _LOGGER.warning(
-    #                         "Unexpected response type (%02X %02X %02X)"
-    #                         % (data[0], data[1], data[2])
-    #                     )
-    #                     continue
-
-    #                 if not validate_checksum(data):
-    #                     _LOGGER.warning("Received packet checksum failed")
-    #                     continue
-
-    #                 _LOGGER.info("Got response from %s", remote_addr_ip)
-
-    #                 # pylint:disable=unused-variable
-    #                 if remote_addr_ip not in devices:
-    #                     (
-    #                         cmd,
-    #                         sub,
-    #                         sub2,
-    #                         device_type,
-    #                         device_id,
-    #                         name,
-    #                         tz,
-    #                         checksum,
-    #                     ) = response_struct.unpack(data)
-    #                     device_name = name.decode("utf-8").split("\x00")[0]
-    #                     device_id_str = f"{device_id:04X}"
-    #                     _LOGGER.info("Discovered %s %s" % (device_id_str, device_name))
-    #                     devices[remote_addr_ip] = DiscoveredDevice(
-    #                         remote_addr_ip, device_id_str, device_name
-    #                     )
-    #                     if stop_on_first:
-    #                         break
-
-    #             except asyncio.exceptions.TimeoutError:
-    #                 break
-
-    #         if stop_on_first and len(devices) > 0:
-    #             break
-
-    #     stream.close()
-    #     sock.close()
-
-    #     return list(devices.values())
 
     async def _request(self, request: bytes, response_struct: struct.Struct) -> bytes:
         assert self.ip_address is not None
@@ -212,41 +204,42 @@ class TSmartClient:
     async def configuration_read(self) -> Configuration:
         """Get configuration from immersion heater."""
 
-        _LOGGER.info("Async get configuration")
+        loop = asyncio.get_running_loop()
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
+
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        sock.bind(("", 1337))
+        sock.connect((self.ip_address, UDP_PORT))
+
+        # One protocol instance will be created to serve all client requests
+        transport, protocol = await loop.create_datagram_endpoint(
+            ConfigurationProtocol,
+            sock=sock,
+        )
+
         request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
 
-        response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
-        response = await self._request(request, response_struct)
+        t = 0
+        request = bytearray(request)
+        for b in request[:-1]:
+            t = t ^ b
+        request[-1] = t ^ 0x55
 
-        if response is None:
-            raise TSmartNoResponseError("No response received")
+        try:
 
-        # pylint:disable=unused-variable
-        (
-            cmd,
-            sub,
-            sub2,
-            device_type,
-            device_id,
-            device_name,
-            tz,
-            userbin,
-            firmware_version_major,
-            firmware_version_minor,
-            firmware_version_deployment,
-            firmware_name,
-            legacy,
-            wifi_ssid,
-            wifi_password,
-            unused,
-        ) = response_struct.unpack(response)
+            for _ in range(2):
+                _LOGGER.debug("Sending configuration message.")
+                transport.sendto(request, sock)
+                configuration: Configuration = await protocol.done
 
-        configuration = Configuration(
-            device_id=f"{device_id:04X}",
-            device_name=device_name.decode("utf-8").split("\x00")[0],
-            firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
-            firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
-        )
+        except asyncio.CancelledError:
+            _LOGGER.debug("Cancelling TSmart configuration task")
+            transport.close()
+
+        finally:
+            transport.close()
 
         _LOGGER.info("Received configuration from %s" % self.ip_address)
 
