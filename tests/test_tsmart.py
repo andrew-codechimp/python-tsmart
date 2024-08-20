@@ -7,10 +7,11 @@ from unittest.mock import patch
 
 import pytest
 
+from aiotsmart.tsmart import TSmartClient, Mode
+
 from aiotsmart.exceptions import (
-    TSmartNoResponseError,
+    TSmartBadResponseError,
 )
-from aiotsmart import TSmartClient, Mode
 
 if TYPE_CHECKING:
     from syrupy import SnapshotAssertion

@@ -2,10 +2,7 @@
 
 from aiotsmart.exceptions import (
     TSmartBadResponseError,
-    TSmartConnectionError,
     TSmartError,
-    TSmartNoResponseError,
-    TSmartNotFoundError,
     TSmartTimeoutError,
 )
 from aiotsmart.discovery import TSmartDiscovery
@@ -20,9 +17,6 @@ __all__ = [
     "Mode",
     "TSmartClient",
     "TSmartBadResponseError",
-    "TSmartNoResponseError",
-    "TSmartConnectionError",
     "TSmartError",
-    "TSmartNotFoundError",
     "TSmartTimeoutError",
 ]

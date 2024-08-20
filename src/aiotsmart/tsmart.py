@@ -4,28 +4,19 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from importlib import metadata
 import logging
 import socket
 import struct
 from typing import Any, Self, Callable
 
-from aiotsmart.exceptions import (
-    TSmartBadResponseError,
-)
+from aiotsmart.exceptions import TSmartBadResponseError, TSmartTimeoutError
 from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.util import validate_checksum, add_checksum
 
-from .const import MESSAGE_HEADER
-
-VERSION = metadata.version(__package__)
-
-UDP_PORT = 1337
-DISCOVERY_INTERVAL = 2  # seconds
-CONFIGURATION_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
-BROADCAST_ADDR = ("255.255.255.255", UDP_PORT)
+from .const import MESSAGE_HEADER, UDP_PORT
 
 _LOGGER = logging.getLogger(__name__)
+TIMEOUT = 5  # seconds
 
 
 # pylint:disable=too-many-locals
@@ -177,7 +168,6 @@ class TSmartClient:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
 
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
         sock.bind(("", 1337))
         sock.connect((self.ip_address, UDP_PORT))
 
@@ -191,15 +181,17 @@ class TSmartClient:
 
         try:
             _LOGGER.debug("Sending configuration message.")
-            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
-            configuration: Configuration = await protocol.done
-
+            async with asyncio.timeout(TIMEOUT):
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                configuration: Configuration = await protocol.done
+        except asyncio.TimeoutError as ex:
+            raise TSmartTimeoutError() from ex
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart configuration task")
-            transport.close()
 
         finally:
             transport.close()
+            sock.close()
 
         _LOGGER.info("Received configuration from %s" % self.ip_address)
 
@@ -228,15 +220,18 @@ class TSmartClient:
 
         try:
             _LOGGER.debug("Sending control message.")
-            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
-            status: Status = await protocol.done
+            async with asyncio.timeout(TIMEOUT):
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                status: Status = await protocol.done
+        except asyncio.TimeoutError as ex:
+            raise TSmartTimeoutError() from ex
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart control task")
-            transport.close()
 
         finally:
             transport.close()
+            sock.close()
 
         _LOGGER.info("Received control from %s" % self.ip_address)
 
@@ -268,15 +263,18 @@ class TSmartClient:
 
         try:
             _LOGGER.debug("Sending control message.")
-            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
-            await protocol.done
+            async with asyncio.timeout(TIMEOUT):
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                await protocol.done
+        except asyncio.TimeoutError as ex:
+            raise TSmartTimeoutError() from ex
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart control task")
-            transport.close()
 
         finally:
             transport.close()
+            sock.close()
 
         _LOGGER.info("Received control from %s" % self.ip_address)
 

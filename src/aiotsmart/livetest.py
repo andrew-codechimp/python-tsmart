@@ -15,8 +15,8 @@ async def do_stuff():
     # devices = await discovery.discover()
     # print(devices)
 
-    # configuration = await client.configuration_read()
-    # print(configuration)
+    configuration = await client.configuration_read()
+    print(configuration)
 
     # status = await client.control_read()
     # print(status)
@@ -24,10 +24,10 @@ async def do_stuff():
     # try:
     #     status = await client.control_read()
     #     pprint(vars(status))
-    # except TSmartConnectionError as exception:
+    # except TSmartError as exception:
     #     print(repr(exception))
 
-    await client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
+    # await client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
 
     # pprint(vars(client))
 

@@ -5,20 +5,8 @@ class TSmartError(Exception):
     """Generic exception."""
 
 
-class TSmartConnectionError(TSmartError):
-    """TSmart connection exception."""
-
-
 class TSmartTimeoutError(TSmartError):
     """TSmart timeout exception."""
-
-
-class TSmartNotFoundError(TSmartError):
-    """TSmart not found exception."""
-
-
-class TSmartNoResponseError(TSmartError):
-    """TSmart no response exception."""
 
 
 class TSmartBadResponseError(TSmartError):

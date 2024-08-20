@@ -12,9 +12,8 @@ from typing import Any, Callable, Self
 from aiotsmart.models import DiscoveredDevice
 from aiotsmart.util import validate_checksum
 
-from .const import MESSAGE_HEADER
+from .const import MESSAGE_HEADER, UDP_PORT
 
-UDP_PORT = 1337
 DISCOVERY_INTERVAL = 2  # seconds
 DISCOVERY_MESSAGE = struct.pack(MESSAGE_HEADER, 0x01, 0, 0, 0x01 ^ 0x55)
 BROADCAST_ADDR = ("255.255.255.255", UDP_PORT)
@@ -151,7 +150,6 @@ class TSmartDiscovery:
 
         sock.bind(("", UDP_PORT))
 
-        # One protocol instance will be created to serve all client requests
         transport, _ = await loop.create_datagram_endpoint(
             lambda: DiscoveryProtocol(self._device_discovered),
             sock=sock,
