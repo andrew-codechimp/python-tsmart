@@ -13,14 +13,14 @@ from aiotsmart.tsmart import TSmartClient
 
 __all__ = [
     "TSmartDiscovery",
+    "Configuration",
+    "DiscoveredDevice",
+    "Status",
+    "Mode",
+    "TSmartClient",
     "TSmartNoResponseError",
     "TSmartConnectionError",
     "TSmartError",
     "TSmartNotFoundError",
     "TSmartTimeoutError",
-    "TSmartClient",
-    "Configuration",
-    "DiscoveredDevice",
-    "Status",
-    "Mode",
 ]

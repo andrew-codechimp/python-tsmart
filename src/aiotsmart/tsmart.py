@@ -10,9 +10,6 @@ import socket
 import struct
 from typing import Any, Callable, Self, cast
 
-import asyncio_dgram
-from asyncio_dgram.aio import DatagramClient
-
 from aiotsmart.exceptions import (
     TSmartConnectionError,
     TSmartNoResponseError,
@@ -54,7 +51,15 @@ def _unpack_configuration_response(data: bytes) -> Configuration | None:
         _LOGGER.debug("Got error response (code %d)" % (data[0]))
         return None
 
-    if data[0] != CONFIGURATION_MESSAGE[0]:
+    request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
+
+    t = 0
+    request = bytearray(request)
+    for b in request[:-1]:
+        t = t ^ b
+    request[-1] = t ^ 0x55
+
+    if data[0] != request[0]:
         _LOGGER.debug(
             "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
         )
@@ -103,8 +108,13 @@ class ConfigurationProtocol(asyncio.DatagramProtocol):
 
     def __init__(self) -> None:
         """Initialize with callback function."""
+        self.peer = None
         self.transport = None
         self.done = asyncio.get_running_loop().create_future()
+
+    def connection_made(self, transport):
+        self.peer = transport.get_extra_info("peername")
+        self.transport = transport
 
     def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
         """Test if responder is a TSmart Immersion Heater."""
@@ -112,17 +122,6 @@ class ConfigurationProtocol(asyncio.DatagramProtocol):
         response = _unpack_configuration_response(data)
 
         if response:
-            if (
-                "device_id" not in response
-                or "device_name" not in response
-                or "firmware_version" not in response
-                or "firmware_name" not in response
-            ):
-                _LOGGER.info(
-                    "TSmart configuration response %s does not contain enough information",
-                    response,
-                )
-
             self.done.set_result(response)
 
 
@@ -211,12 +210,11 @@ class TSmartClient:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         sock.bind(("", 1337))
-        sock.connect((self.ip_address, UDP_PORT))
+        # sock.connect((self.ip_address, UDP_PORT))
 
         # One protocol instance will be created to serve all client requests
         transport, protocol = await loop.create_datagram_endpoint(
-            ConfigurationProtocol,
-            sock=sock,
+            ConfigurationProtocol, sock=sock
         )
 
         request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
@@ -229,10 +227,10 @@ class TSmartClient:
 
         try:
 
-            for _ in range(2):
-                _LOGGER.debug("Sending configuration message.")
-                transport.sendto(request, sock)
-                configuration: Configuration = await protocol.done
+            # for _ in range(2):
+            _LOGGER.debug("Sending configuration message.")
+            transport.sendto(request, (self.ip_address, UDP_PORT))
+            configuration: Configuration = await protocol.done
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart configuration task")

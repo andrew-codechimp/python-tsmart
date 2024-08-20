@@ -1,20 +1,18 @@
 """Tests."""
 
 import asyncio
-from aiotsmart.tsmart import TSmartClient
-from aiotsmart.discovery import TSmartDiscovery
+
+from aiotsmart import TSmartClient, TSmartDiscovery
 
 
-# client = TSmartClient()
 client = TSmartClient("192.168.1.35")
-discovery = TSmartDiscovery()
 
 
 async def do_stuff():
     """Test."""
 
+    # discovery = TSmartDiscovery()
     # devices = await discovery.discover()
-
     # print(devices)
 
     configuration = await client.configuration_read()

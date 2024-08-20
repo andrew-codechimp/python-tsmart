@@ -10,7 +10,7 @@ import pytest
 from aiotsmart.exceptions import (
     TSmartNoResponseError,
 )
-from aiotsmart.tsmart import TSmartClient, Mode
+from aiotsmart import TSmartClient, Mode
 
 if TYPE_CHECKING:
     from syrupy import SnapshotAssertion
