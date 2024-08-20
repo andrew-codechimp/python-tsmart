@@ -1,6 +1,7 @@
 """Asynchronous Python client for TSmart."""
 
 from aiotsmart.exceptions import (
+    TSmartBadResponseError,
     TSmartConnectionError,
     TSmartError,
     TSmartNoResponseError,
@@ -18,6 +19,7 @@ __all__ = [
     "Status",
     "Mode",
     "TSmartClient",
+    "TSmartBadResponseError",
     "TSmartNoResponseError",
     "TSmartConnectionError",
     "TSmartError",

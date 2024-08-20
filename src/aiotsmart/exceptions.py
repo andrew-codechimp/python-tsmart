@@ -19,3 +19,7 @@ class TSmartNotFoundError(TSmartError):
 
 class TSmartNoResponseError(TSmartError):
     """TSmart no response exception."""
+
+
+class TSmartBadResponseError(TSmartError):
+    """TSmart bad response exception."""

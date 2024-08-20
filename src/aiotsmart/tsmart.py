@@ -8,13 +8,10 @@ from importlib import metadata
 import logging
 import socket
 import struct
-from typing import Any, Callable, Self, cast
+from typing import Any, Self, Callable
 
 from aiotsmart.exceptions import (
-    TSmartConnectionError,
-    TSmartNoResponseError,
-    TSmartNotFoundError,
-    TSmartTimeoutError,
+    TSmartBadResponseError,
 )
 from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.util import validate_checksum, add_checksum
@@ -39,25 +36,21 @@ def _unpack_configuration_response(
     response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
 
     if len(data) != response_struct.size:
-        _LOGGER.debug(
+        raise TSmartBadResponseError(
             "Unexpected packet length (got: %d, expected: %d)"
             % (len(data), response_struct.size)
         )
-        return None
 
     if data[0] == 0:
-        _LOGGER.debug("Got error response (code %d)" % (data[0]))
-        return None
+        raise TSmartBadResponseError("Got error response (code %d)" % (data[0]))
 
     if data[0] != request[0]:
-        _LOGGER.debug(
+        raise TSmartBadResponseError(
             "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
         )
-        return None
 
     if not validate_checksum(data):
-        _LOGGER.debug("Received packet checksum failed")
-        return None
+        raise TSmartBadResponseError("Received packet checksum failed")
 
     # pylint:disable=unused-variable
     (
@@ -94,30 +87,26 @@ def _unpack_configuration_response(
 
 
 # pylint:disable=too-many-locals
-def _unpack_control_response(request: bytearray, data: bytes) -> Configuration | None:
-    """Return unpacked control response from TSmart Immersion Heater."""
+def _unpack_control_read_response(request: bytearray, data: bytes) -> Status | None:
+    """Return unpacked control read response from TSmart Immersion Heater."""
     response_struct = struct.Struct("=BBBBHBHBBH16sB")
 
     if len(data) != response_struct.size:
-        _LOGGER.debug(
+        raise TSmartBadResponseError(
             "Unexpected packet length (got: %d, expected: %d)"
             % (len(data), response_struct.size)
         )
-        return None
 
     if data[0] == 0:
-        _LOGGER.debug("Got error response (code %d)" % (data[0]))
-        return None
+        raise TSmartBadResponseError(("Got error response (code %d)" % (data[0])))
 
     if data[0] != request[0]:
-        _LOGGER.debug(
+        raise TSmartBadResponseError(
             "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
         )
-        return None
 
     if not validate_checksum(data):
-        _LOGGER.debug("Received packet checksum failed")
-        return None
+        raise TSmartBadResponseError("Received packet checksum failed")
 
     # pylint:disable=unused-variable
     (
@@ -147,29 +136,31 @@ def _unpack_control_response(request: bytearray, data: bytes) -> Configuration |
     return status
 
 
+# pylint:disable=too-many-locals
+def _unpack_control_write_response(_: bytearray, data: bytes) -> None:
+    """Return unpacked control write response from TSmart Immersion Heater."""
+
+    if data != b"\xf2\x00\x00\xa7":
+        raise TSmartBadResponseError
+
+
 class TsmartProtocol(asyncio.DatagramProtocol):
     """Protocol to send request and receive responses."""
 
-    def __init__(self, request: bytearray, unpack_function: callable) -> None:
+    def __init__(
+        self, request: bytearray, unpack_function: Callable[[bytearray, bytes], Any]
+    ) -> None:
         """Initialize with callback function."""
-        self.peer = None
-        self.transport = None
         self.request = request
         self.unpack_function = unpack_function
         self.done = asyncio.get_running_loop().create_future()
-
-    def connection_made(self, transport):
-        self.peer = transport.get_extra_info("peername")
-        self.transport = transport
 
     def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
         """Test if responder is a TSmart Immersion Heater."""
         _LOGGER.debug("Received configuration response from %s", addr)
         response = self.unpack_function(self.request, data)
-        # response = _unpack_configuration_response(self.request, data)
 
-        if response:
-            self.done.set_result(response)
+        self.done.set_result(response)
 
 
 @dataclass
@@ -177,75 +168,6 @@ class TSmartClient:
     """TSmart Client."""
 
     ip_address: str
-
-    async def _request(self, request: bytes, response_struct: struct.Struct) -> bytes:
-        assert self.ip_address is not None
-
-        t = 0
-        request = bytearray(request)
-        for b in request[:-1]:
-            t = t ^ b
-        request[-1] = t ^ 0x55
-
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
-
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("", 1337))
-            sock.connect((self.ip_address, UDP_PORT))
-
-            stream = cast(DatagramClient, await asyncio_dgram.from_socket(sock))
-        except OSError as exception:
-            msg = exception.strerror
-            if exception.errno == 8:
-                raise TSmartNotFoundError(msg) from exception
-            if exception.errno == 48:
-                msg = "Unable to connect to socket"
-            raise TSmartConnectionError(msg) from exception
-
-        data = None
-        for _ in range(2):
-            await stream.send(data=request)
-
-            _LOGGER.info("Message sent to %s" % self.ip_address)
-
-            try:
-                data, _ = await asyncio.wait_for(stream.recv(), 2)
-                if len(data) != response_struct.size:
-                    _LOGGER.warning(
-                        "Unexpected packet length (got: %d, expected: %d)"
-                        % (len(data), response_struct.size)
-                    )
-                    continue
-
-                if data[0] == 0:
-                    _LOGGER.warning("Got error response (code %d)" % (data[0]))
-                    continue
-
-                if data[0] != request[0] or data[1] != data[1] or data[2] != data[2]:
-                    _LOGGER.warning(
-                        "Unexpected response type (%02X %02X %02X)"
-                        % (data[0], data[1], data[2])
-                    )
-                    continue
-
-                if not validate_checksum(data):
-                    _LOGGER.warning("Received packet checksum failed")
-
-            except asyncio.exceptions.TimeoutError:
-                continue
-
-            break
-
-        stream.close()
-        sock.close()
-
-        if data is None:
-            raise TSmartTimeoutError(
-                "Timeout occurred while connecting to immersion heater"
-            )
-
-        return data
 
     async def configuration_read(self) -> Configuration:
         """Get configuration from immersion heater."""
@@ -268,11 +190,9 @@ class TSmartClient:
         )
 
         try:
-
-            for _ in range(2):
-                _LOGGER.debug("Sending configuration message.")
-                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
-                configuration: Configuration = await protocol.done
+            _LOGGER.debug("Sending configuration message.")
+            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+            configuration: Configuration = await protocol.done
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart configuration task")
@@ -302,16 +222,14 @@ class TSmartClient:
         request_checksum = add_checksum(request)
 
         transport, protocol = await loop.create_datagram_endpoint(
-            lambda: TsmartProtocol(request, _unpack_control_response),
+            lambda: TsmartProtocol(request_checksum, _unpack_control_read_response),
             sock=sock,
         )
 
         try:
-
-            for _ in range(2):
-                _LOGGER.debug("Sending control message.")
-                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
-                status: Status = await protocol.done
+            _LOGGER.debug("Sending control message.")
+            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+            status: Status = await protocol.done
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart control task")
@@ -327,16 +245,40 @@ class TSmartClient:
     async def control_write(self, power: bool, mode: Mode, setpoint: int) -> None:
         """Set the immersion heater."""
 
-        _LOGGER.info("Async control set %d %d %0.2f" % (power, mode, setpoint))
+        _LOGGER.info("Control set %d %d %0.2f" % (power, mode, setpoint))
+
+        loop = asyncio.get_running_loop()
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
+
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        sock.bind(("", 1337))
+        sock.connect((self.ip_address, UDP_PORT))
 
         request = struct.pack(
             "=BBBBHBB", 0xF2, 0, 0, 1 if power else 0, setpoint * 10, mode, 0
         )
+        request_checksum = add_checksum(request)
 
-        response_struct = struct.Struct(MESSAGE_HEADER)
-        response = await self._request(request, response_struct)
-        if response != b"\xf2\x00\x00\xa7":
-            raise TSmartNoResponseError
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: TsmartProtocol(request_checksum, _unpack_control_write_response),
+            sock=sock,
+        )
+
+        try:
+            _LOGGER.debug("Sending control message.")
+            transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+            await protocol.done
+
+        except asyncio.CancelledError:
+            _LOGGER.debug("Cancelling TSmart control task")
+            transport.close()
+
+        finally:
+            transport.close()
+
+        _LOGGER.info("Received control from %s" % self.ip_address)
 
     async def __aenter__(self) -> Self:
         """Async enter.
