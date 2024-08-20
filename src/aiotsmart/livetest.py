@@ -17,7 +17,9 @@ async def do_stuff():
 
     configuration = await client.configuration_read()
     print(configuration)
-    print(vars(configuration))
+
+    # status = await client.control_read()
+    # print(status)
 
     # try:
     #     status = await client.control_read()

@@ -17,7 +17,7 @@ from aiotsmart.exceptions import (
     TSmartTimeoutError,
 )
 from aiotsmart.models import Configuration, Mode, Status
-from aiotsmart.util import validate_checksum
+from aiotsmart.util import validate_checksum, add_checksum
 
 from .const import MESSAGE_HEADER
 
@@ -32,13 +32,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # pylint:disable=too-many-locals
-def _unpack_configuration_response(data: bytes) -> Configuration | None:
+def _unpack_configuration_response(
+    request: bytearray, data: bytes
+) -> Configuration | None:
     """Return unpacked configuration response from TSmart Immersion Heater."""
     response_struct = struct.Struct("=BBBHL32sBBBBB32s28s32s64s124s")
-
-    if len(data) == len(CONFIGURATION_MESSAGE):
-        # Got our own broadcast
-        return None
 
     if len(data) != response_struct.size:
         _LOGGER.debug(
@@ -50,14 +48,6 @@ def _unpack_configuration_response(data: bytes) -> Configuration | None:
     if data[0] == 0:
         _LOGGER.debug("Got error response (code %d)" % (data[0]))
         return None
-
-    request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
-
-    t = 0
-    request = bytearray(request)
-    for b in request[:-1]:
-        t = t ^ b
-    request[-1] = t ^ 0x55
 
     if data[0] != request[0]:
         _LOGGER.debug(
@@ -103,13 +93,69 @@ def _unpack_configuration_response(data: bytes) -> Configuration | None:
     return configuration
 
 
-class ConfigurationProtocol(asyncio.DatagramProtocol):
-    """Protocol to send configuration request and receive responses."""
+# pylint:disable=too-many-locals
+def _unpack_control_response(request: bytearray, data: bytes) -> Configuration | None:
+    """Return unpacked control response from TSmart Immersion Heater."""
+    response_struct = struct.Struct("=BBBBHBHBBH16sB")
 
-    def __init__(self) -> None:
+    if len(data) != response_struct.size:
+        _LOGGER.debug(
+            "Unexpected packet length (got: %d, expected: %d)"
+            % (len(data), response_struct.size)
+        )
+        return None
+
+    if data[0] == 0:
+        _LOGGER.debug("Got error response (code %d)" % (data[0]))
+        return None
+
+    if data[0] != request[0]:
+        _LOGGER.debug(
+            "Unexpected response type (%02X %02X %02X)" % (data[0], data[1], data[2])
+        )
+        return None
+
+    if not validate_checksum(data):
+        _LOGGER.debug("Received packet checksum failed")
+        return None
+
+    # pylint:disable=unused-variable
+    (
+        cmd,
+        sub,
+        sub2,
+        power,
+        setpoint,
+        mode,
+        t_high,
+        relay,
+        smart_state,
+        t_low,
+        error,
+        checksum,
+    ) = response_struct.unpack(data)
+
+    status = Status(
+        power=bool(power),
+        setpoint=setpoint / 10,
+        mode=Mode(mode),
+        temperature_high=t_high / 10,
+        temperature_low=t_low / 10,
+        temperature_average=(t_high + t_low) / 20,
+        relay=bool(relay),
+    )
+    return status
+
+
+class TsmartProtocol(asyncio.DatagramProtocol):
+    """Protocol to send request and receive responses."""
+
+    def __init__(self, request: bytearray, unpack_function: callable) -> None:
         """Initialize with callback function."""
         self.peer = None
         self.transport = None
+        self.request = request
+        self.unpack_function = unpack_function
         self.done = asyncio.get_running_loop().create_future()
 
     def connection_made(self, transport):
@@ -119,7 +165,8 @@ class ConfigurationProtocol(asyncio.DatagramProtocol):
     def datagram_received(self, data: bytes, addr: tuple[str | Any, int]) -> None:
         """Test if responder is a TSmart Immersion Heater."""
         _LOGGER.debug("Received configuration response from %s", addr)
-        response = _unpack_configuration_response(data)
+        response = self.unpack_function(self.request, data)
+        # response = _unpack_configuration_response(self.request, data)
 
         if response:
             self.done.set_result(response)
@@ -210,27 +257,22 @@ class TSmartClient:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         sock.bind(("", 1337))
-        # sock.connect((self.ip_address, UDP_PORT))
-
-        # One protocol instance will be created to serve all client requests
-        transport, protocol = await loop.create_datagram_endpoint(
-            ConfigurationProtocol, sock=sock
-        )
+        sock.connect((self.ip_address, UDP_PORT))
 
         request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
+        request_checksum = add_checksum(request)
 
-        t = 0
-        request = bytearray(request)
-        for b in request[:-1]:
-            t = t ^ b
-        request[-1] = t ^ 0x55
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: TsmartProtocol(request_checksum, _unpack_configuration_response),
+            sock=sock,
+        )
 
         try:
 
-            # for _ in range(2):
-            _LOGGER.debug("Sending configuration message.")
-            transport.sendto(request, (self.ip_address, UDP_PORT))
-            configuration: Configuration = await protocol.done
+            for _ in range(2):
+                _LOGGER.debug("Sending configuration message.")
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                configuration: Configuration = await protocol.done
 
         except asyncio.CancelledError:
             _LOGGER.debug("Cancelling TSmart configuration task")
@@ -247,42 +289,38 @@ class TSmartClient:
     async def control_read(self) -> Status:
         """Get status from the immersion heater."""
 
-        _LOGGER.info("Async get status")
+        loop = asyncio.get_running_loop()
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
+
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        sock.bind(("", 1337))
+        sock.connect((self.ip_address, UDP_PORT))
+
         request = struct.pack(MESSAGE_HEADER, 0xF1, 0, 0, 0)
+        request_checksum = add_checksum(request)
 
-        response_struct = struct.Struct("=BBBBHBHBBH16sB")
-        response = await self._request(request, response_struct)
-
-        if response is None:
-            raise TSmartNoResponseError("No response received")
-
-        # pylint:disable=unused-variable
-        (
-            cmd,
-            sub,
-            sub2,
-            power,
-            setpoint,
-            mode,
-            t_high,
-            relay,
-            smart_state,
-            t_low,
-            error,
-            checksum,
-        ) = response_struct.unpack(response)
-
-        status = Status(
-            power=bool(power),
-            setpoint=setpoint / 10,
-            mode=Mode(mode),
-            temperature_high=t_high / 10,
-            temperature_low=t_low / 10,
-            temperature_average=(t_high + t_low) / 20,
-            relay=bool(relay),
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: TsmartProtocol(request, _unpack_control_response),
+            sock=sock,
         )
 
-        _LOGGER.info("Received status from %s" % self.ip_address)
+        try:
+
+            for _ in range(2):
+                _LOGGER.debug("Sending control message.")
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                status: Status = await protocol.done
+
+        except asyncio.CancelledError:
+            _LOGGER.debug("Cancelling TSmart control task")
+            transport.close()
+
+        finally:
+            transport.close()
+
+        _LOGGER.info("Received control from %s" % self.ip_address)
 
         return status
 
