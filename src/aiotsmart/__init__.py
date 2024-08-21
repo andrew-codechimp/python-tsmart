@@ -2,6 +2,7 @@
 
 from aiotsmart.exceptions import (
     TSmartBadResponseError,
+    TSmartCancelledError,
     TSmartError,
     TSmartTimeoutError,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "Mode",
     "TSmartClient",
     "TSmartBadResponseError",
+    "TSmartCancelledError",
     "TSmartError",
     "TSmartTimeoutError",
 ]

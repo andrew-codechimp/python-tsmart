@@ -5,6 +5,10 @@ class TSmartError(Exception):
     """Generic exception."""
 
 
+class TSmartCancelledError(TSmartError):
+    """TSmart cancelled exception."""
+
+
 class TSmartTimeoutError(TSmartError):
     """TSmart timeout exception."""
 

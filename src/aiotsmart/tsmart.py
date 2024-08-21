@@ -9,7 +9,11 @@ import socket
 import struct
 from typing import Any, Self, Callable
 
-from aiotsmart.exceptions import TSmartBadResponseError, TSmartTimeoutError
+from aiotsmart.exceptions import (
+    TSmartBadResponseError,
+    TSmartCancelledError,
+    TSmartTimeoutError,
+)
 from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.util import validate_checksum, add_checksum
 
@@ -68,6 +72,7 @@ def _unpack_configuration_response(
         device_name=device_name.decode("utf-8").split("\x00")[0],
         firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
         firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
+        raw_response=data,
     )
     _LOGGER.info(
         "Configuration received %s %s"
@@ -111,7 +116,7 @@ def _unpack_control_read_response(request: bytearray, data: bytes) -> Status | N
         relay,
         smart_state,
         t_low,
-        error,
+        error_buffer,
         checksum,
     ) = response_struct.unpack(data)
 
@@ -123,6 +128,15 @@ def _unpack_control_read_response(request: bytearray, data: bytes) -> Status | N
         temperature_low=t_low / 10,
         temperature_average=(t_high + t_low) / 20,
         relay=bool(relay),
+        error_e01=(error_buffer[0] >> 7) & 1 == 1,
+        error_e02=(error_buffer[2] >> 7) & 1 == 1,
+        error_e03=(error_buffer[4] >> 7) & 1 == 1,
+        error_e04=(error_buffer[6] >> 7) & 1 == 1,
+        error_w01=(error_buffer[8] >> 7) & 1 == 1,
+        error_w02=(error_buffer[10] >> 7) & 1 == 1,
+        error_w03=(error_buffer[12] >> 7) & 1 == 1,
+        error_e05=(error_buffer[14] >> 7) & 1 == 1,
+        raw_response=data,
     )
     return status
 
@@ -191,8 +205,8 @@ class TSmartClient:
                 configuration: Configuration = await protocol.done
         except asyncio.TimeoutError as ex:
             raise TSmartTimeoutError() from ex
-        except asyncio.CancelledError:
-            _LOGGER.debug("Cancelling TSmart configuration task")
+        except asyncio.CancelledError as ex:
+            raise TSmartCancelledError() from ex
 
         finally:
             transport.close()
@@ -226,8 +240,8 @@ class TSmartClient:
         except asyncio.TimeoutError as ex:
             raise TSmartTimeoutError() from ex
 
-        except asyncio.CancelledError:
-            _LOGGER.debug("Cancelling TSmart control task")
+        except asyncio.CancelledError as ex:
+            raise TSmartCancelledError() from ex
 
         finally:
             transport.close()
@@ -264,8 +278,8 @@ class TSmartClient:
         except asyncio.TimeoutError as ex:
             raise TSmartTimeoutError() from ex
 
-        except asyncio.CancelledError:
-            _LOGGER.debug("Cancelling TSmart control task")
+        except asyncio.CancelledError as ex:
+            raise TSmartCancelledError() from ex
 
         finally:
             transport.close()

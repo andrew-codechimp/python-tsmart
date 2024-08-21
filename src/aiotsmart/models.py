@@ -36,6 +36,7 @@ class Configuration:
     device_name: str
     firmware_version: str
     firmware_name: str
+    raw_response: bytes
 
 
 @dataclass
@@ -49,3 +50,26 @@ class Status:
     temperature_low: str
     temperature_average: str
     relay: bool
+    error_e01: bool
+    error_e02: bool
+    error_e03: bool
+    error_e04: bool
+    error_e05: bool
+    error_w01: bool
+    error_w02: bool
+    error_w03: bool
+    raw_response: bytes
+
+    @property
+    def has_error(self) -> str:
+        """Is there any error."""
+        return (
+            self.error_e01
+            or self.error_e02
+            or self.error_e03
+            or self.error_e04
+            or self.error_e05
+            or self.error_w01
+            or self.error_w02
+            or self.error_w03
+        )

@@ -15,11 +15,13 @@ async def do_stuff():
     # devices = await discovery.discover()
     # print(devices)
 
-    configuration = await client.configuration_read()
-    print(configuration)
+    # configuration = await client.configuration_read()
+    # print(configuration)
 
-    # status = await client.control_read()
-    # print(status)
+    status = await client.control_read()
+    print(status)
+
+    print(status.has_error)
 
     # try:
     #     status = await client.control_read()
