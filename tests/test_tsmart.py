@@ -14,6 +14,7 @@ from aiotsmart.exceptions import (
     TSmartBadResponseError,
 )
 import aiotsmart.tsmart
+from aiotsmart.util import add_checksum
 
 if TYPE_CHECKING:
     from syrupy import SnapshotAssertion
@@ -33,6 +34,14 @@ CONTROL_READ_REQUEST = b"\xf1\x00\x00\xa4"
 CONTROL_READ_DATA = b"\xf1\x00\x00\x00d\x00\x00\x1d\x02\x00\x01\x1a\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc6"
 BAD_CONTROL_READ_DATA = b"\xf1\x00\x00\x00d\x00\x00\x1a\x02\x00\x01\x1a\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc6"
 
+CONTROL_WRITE_DATA = b"\xf2\x00\x00\xa7"
+BAD_CONTROL_WRITE_DATA = b"\xf1\x00\x00\xa7"
+
+
+async def test_add_checksum() -> None:
+    """Test adding a checksum"""
+    assert add_checksum(b"\xf1\x00\x00\x00") == b"\xf1\x00\x00\xa4"
+
 
 async def test_configuration_unpack(
     snapshot: SnapshotAssertion,
@@ -47,6 +56,7 @@ async def test_configuration_unpack(
         == snapshot
     )
 
+    # pylint:disable=protected-access
     with pytest.raises(TSmartBadResponseError):
         assert aiotsmart.tsmart._unpack_configuration_response(
             CONFIGURATION_REQUEST, BAD_CONFIGURATION_DATA
@@ -75,9 +85,28 @@ async def test_control_read_unpack(
         CONTROL_READ_REQUEST, CONTROL_READ_DATA
     ).has_error
 
+    # pylint:disable=protected-access
     with pytest.raises(TSmartBadResponseError):
         assert aiotsmart.tsmart._unpack_control_read_response(
             CONTROL_READ_REQUEST, BAD_CONTROL_READ_DATA
+        )
+
+
+async def test_control_write_unpack(
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test control write unpack."""
+
+    # pylint:disable=protected-access
+    assert (
+        aiotsmart.tsmart._unpack_control_write_response(None, CONTROL_WRITE_DATA)
+        == snapshot
+    )
+
+    # pylint:disable=protected-access
+    with pytest.raises(TSmartBadResponseError):
+        assert aiotsmart.tsmart._unpack_control_write_response(
+            None, BAD_CONTROL_WRITE_DATA
         )
 
 
@@ -95,6 +124,8 @@ async def test_control_read_unpack(
 #         return_value=CONFIGURATION_RESPONSE,
 #     ):
 #         assert tsmart_client.configuration_read == snapshot
+
+
 #     protocol = aiotsmart.tsmart.TsmartProtocol(callback)
 #     async_protocol = aiotsmart.tsmart.TsmartProtocol(async_callback)
 #     protocol.datagram_received(DATA, ADDR)
