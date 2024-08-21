@@ -61,7 +61,7 @@ class Status:
     raw_response: bytes
 
     @property
-    def has_error(self) -> str:
+    def has_error(self) -> bool:
         """Is there any error."""
         return (
             self.error_e01

@@ -29,7 +29,7 @@ async def do_stuff():
     # except TSmartError as exception:
     #     print(repr(exception))
 
-    await client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
+    # await client.control_write(power=True, mode=Mode.MANUAL, setpoint=15)
 
     # pprint(vars(client))
 
