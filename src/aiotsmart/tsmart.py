@@ -227,6 +227,8 @@ class TSmartClient:
         request = struct.pack(MESSAGE_HEADER, 0xF1, 0, 0, 0)
         request_checksum = add_checksum(request)
 
+        print(request_checksum)
+
         transport, protocol = await loop.create_datagram_endpoint(
             lambda: TsmartProtocol(request_checksum, _unpack_control_read_response),
             sock=sock,
