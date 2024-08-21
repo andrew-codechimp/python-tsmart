@@ -160,16 +160,21 @@ class TSmartClient:
 
     ip_address: str
 
-    async def configuration_read(self) -> Configuration:
-        """Get configuration from immersion heater."""
-
-        loop = asyncio.get_running_loop()
-
+    def create_socket(self) -> socket:
+        """Create a UDP socket."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
 
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("", 1337))
         sock.connect((self.ip_address, UDP_PORT))
+        return sock
+
+    async def configuration_read(self) -> Configuration:
+        """Get configuration from immersion heater."""
+
+        loop = asyncio.get_running_loop()
+
+        sock = self.create_socket()
 
         request = struct.pack(MESSAGE_HEADER, 0x21, 0, 0, 0)
         request_checksum = add_checksum(request)
@@ -203,12 +208,7 @@ class TSmartClient:
 
         loop = asyncio.get_running_loop()
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
-
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        sock.bind(("", 1337))
-        sock.connect((self.ip_address, UDP_PORT))
+        sock = self.create_socket()
 
         request = struct.pack(MESSAGE_HEADER, 0xF1, 0, 0, 0)
         request_checksum = add_checksum(request)
@@ -244,12 +244,7 @@ class TSmartClient:
 
         loop = asyncio.get_running_loop()
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
-
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        sock.bind(("", 1337))
-        sock.connect((self.ip_address, UDP_PORT))
+        sock = self.create_socket()
 
         request = struct.pack(
             "=BBBBHBB", 0xF2, 0, 0, 1 if power else 0, setpoint * 10, mode, 0
