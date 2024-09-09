@@ -174,7 +174,7 @@ class TSmartClient:
 
     ip_address: str
 
-    def create_socket(self) -> socket:
+    def create_socket(self) -> socket.socket:
         """Create a UDP socket."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
 
