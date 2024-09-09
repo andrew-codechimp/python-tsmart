@@ -12,8 +12,6 @@
 
 Asynchronous Python client for TSmart.
 
-Work in progress!
-
 ## About
 
 This package allows you to fetch data from your TSmart Immersion Heater.
