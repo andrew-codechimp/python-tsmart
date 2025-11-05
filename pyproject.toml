@@ -1,14 +1,15 @@
-[tool.poetry]
+[project]
 name = "aiotsmart"
 version = "1.0.0"
 description = "Asynchronous Python client for TSmart."
-authors = ["Andrew Jackson <andrew@codechimp.org>"]
-maintainers = ["Andrew Jackson <andrew@codechimp.org>"]
+authors = [
+    {name = "Andrew Jackson", email = "andrew@codechimp.org"}
+]
+maintainers = [
+    {name = "Andrew Jackson", email = "andrew@codechimp.org"}
+]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/andrew-codechimp/python-tsmart"
-repository = "https://github.com/andrew-codechimp/python-tsmart"
-documentation = "https://github.com/andrew-codechimp/python-tsmart"
 keywords = ["api", "async", "client"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -17,9 +18,26 @@ classifiers = [
   "Natural Language :: English",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+requires-python = ">=3.11,<4"
+dependencies = [
+    "aiohttp>=3.0.0",
+    "yarl>=1.6.0",
+    "asyncio-dgram>=2.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/andrew-codechimp/python-tsmart"
+Repository = "https://github.com/andrew-codechimp/python-tsmart"
+Documentation = "https://github.com/andrew-codechimp/python-tsmart"
+"Bug Tracker" = "https://github.com/andrew-codechimp/python-tsmart/issues"
+Changelog = "https://github.com/andrew-codechimp/python-tsmart/releases"
+
+[tool.poetry]
 packages = [
     { include = "aiotsmart", from = "src" },
 ]
@@ -46,10 +64,6 @@ safety = "3.2.4"
 yamllint = "1.35.1"
 syrupy = "4.6.1"
 aioresponses = "0.7.6"
-
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/andrew-codechimp/python-tsmart/issues"
-Changelog = "https://github.com/andrew-codechimp/python-tsmart/releases"
 
 [tool.coverage.report]
 show_missing = true
