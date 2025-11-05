@@ -54,12 +54,36 @@ async def test_discovery(
     async_callback.assert_called_once()
 
 
-# async def test_bad_response():
-#     """Test handling of a non TSmart discovery response."""
+async def test_discovery_bad_response() -> None:
+    """Test handling of a non TSmart discovery response."""
+    callback = Mock()
+    
+    with patch("aiotsmart.discovery._unpack_discovery_response", return_value=None):
+        protocol = aiotsmart.discovery.DiscoveryProtocol(callback)
+        protocol.datagram_received(BAD_DATA, ADDR)
+        
+    # Should not call callback for bad response
+    callback.assert_not_called()
 
-#     with patch(
-#         "aiotsmart.discovery._unpack_discovery_response", return_value=BAD_RESPONSE
-#     ), patch.object(tsmart_logger, "info") as logger:
-#         test_protocol = aiotsmart.discovery.DiscoveryProtocol(None)
-#         test_protocol.datagram_received(ADDR, BAD_DATA)
-#         logger.assert_called_once()
+
+async def test_discovery_protocol_with_callable() -> None:
+    """Test discovery protocol with regular callable."""
+    result = None
+    
+    def callback(response):
+        nonlocal result
+        result = response
+    
+    # Use the RESPONSE dictionary that matches what _unpack_discovery_response returns
+    with patch("aiotsmart.discovery._unpack_discovery_response", return_value=RESPONSE):
+        protocol = aiotsmart.discovery.DiscoveryProtocol(callback)
+        protocol.datagram_received(DATA, ADDR)
+        
+    # The callback receives a DiscoveredDevice object, not the raw response
+    from aiotsmart.models import DiscoveredDevice
+    expected = DiscoveredDevice(
+        ip_address="192.168.1.35",
+        device_id="9B2A0D", 
+        device_name="TESLA"
+    )
+    assert result == expected
