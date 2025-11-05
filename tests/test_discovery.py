@@ -23,8 +23,6 @@ BAD_RESPONSE = {"ip_address": "192.168.1.35", "device_id": "9B2A0D"}
 # pylint: disable=C0103
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
-tsmart_logger = logging.getLogger("pysqueezebox.discovery")
-
 
 async def test_discovery_unpack() -> None:
     """Test device discovery unpack."""
