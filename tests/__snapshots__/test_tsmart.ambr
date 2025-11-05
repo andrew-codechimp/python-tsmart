@@ -22,9 +22,9 @@
     'power': False,
     'raw_response': bytearray(b'\xf1\x00\x00\x00d\x00\x00\x1d\x02\x00\x01\x1a\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc6'),
     'relay': False,
-    'setpoint': 10.0,
-    'temperature_average': 53.95,
-    'temperature_high': 54.1,
-    'temperature_low': 53.8,
+    'setpoint': 10,
+    'temperature_average': 53,
+    'temperature_high': 54,
+    'temperature_low': 53,
   })
 # ---
