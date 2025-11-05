@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
-import logging
-
-import pytest
 
 import aiotsmart
 from aiotsmart.discovery import TSmartDiscovery
