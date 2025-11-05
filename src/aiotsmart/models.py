@@ -44,11 +44,11 @@ class Status:
     """Status model."""
 
     power: bool
-    setpoint: str
+    setpoint: int
     mode: Mode
-    temperature_high: str
-    temperature_low: str
-    temperature_average: str
+    temperature_high: int
+    temperature_low: int
+    temperature_average: int
     relay: bool
     error_e01: bool
     error_e02: bool

@@ -122,11 +122,11 @@ def _unpack_control_read_response(request: bytearray, data: bytes) -> Status | N
 
     status = Status(
         power=bool(power),
-        setpoint=setpoint / 10,
+        setpoint=int(setpoint / 10),
         mode=Mode(mode),
-        temperature_high=t_high / 10,
-        temperature_low=t_low / 10,
-        temperature_average=(t_high + t_low) / 20,
+        temperature_high=int(t_high / 10),
+        temperature_low=int(t_low / 10),
+        temperature_average=int((t_high + t_low) / 20),
         relay=bool(relay),
         error_e01=(error_buffer[0] >> 7) & 1 == 1,
         error_e02=(error_buffer[2] >> 7) & 1 == 1,
