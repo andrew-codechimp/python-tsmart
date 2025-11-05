@@ -3,7 +3,7 @@
 from aiotsmart.models import Mode, DiscoveredDevice, Configuration, Status
 
 
-def test_mode_enum_values():
+def test_mode_enum_values() -> None:
     """Test Mode enum values."""
     assert Mode.MANUAL == 0x00
     assert Mode.ECO == 0x01
@@ -15,29 +15,27 @@ def test_mode_enum_values():
     assert Mode.CRITICAL == 0x22
 
 
-def test_discovered_device():
+def test_discovered_device() -> None:
     """Test DiscoveredDevice dataclass."""
     device = DiscoveredDevice(
-        ip_address="192.168.1.100",
-        device_id="ABC123",
-        device_name="Test Device"
+        ip_address="192.168.1.100", device_id="ABC123", device_name="Test Device"
     )
-    
+
     assert device.ip_address == "192.168.1.100"
     assert device.device_id == "ABC123"
     assert device.device_name == "Test Device"
 
 
-def test_configuration():
+def test_configuration() -> None:
     """Test Configuration dataclass."""
     config = Configuration(
         device_id="DEF456",
         device_name="Test Config",
         firmware_version="1.2.3",
         firmware_name="Test Firmware",
-        raw_response=b"test_data"
+        raw_response=b"test_data",
     )
-    
+
     assert config.device_id == "DEF456"
     assert config.device_name == "Test Config"
     assert config.firmware_version == "1.2.3"
@@ -45,7 +43,7 @@ def test_configuration():
     assert config.raw_response == b"test_data"
 
 
-def test_status_no_errors():
+def test_status_no_errors() -> None:
     """Test Status dataclass with no errors."""
     status = Status(
         power=True,
@@ -63,9 +61,9 @@ def test_status_no_errors():
         error_w01=False,
         error_w02=False,
         error_w03=False,
-        raw_response=b"status_data"
+        raw_response=b"status_data",
     )
-    
+
     assert status.power is True
     assert status.setpoint == 22
     assert status.mode == Mode.ECO
@@ -76,7 +74,7 @@ def test_status_no_errors():
     assert status.has_error is False
 
 
-def test_status_with_error_e01():
+def test_status_with_error_e01() -> None:
     """Test Status dataclass with error_e01."""
     status = Status(
         power=True,
@@ -94,13 +92,13 @@ def test_status_with_error_e01():
         error_w01=False,
         error_w02=False,
         error_w03=False,
-        raw_response=b"status_data"
+        raw_response=b"status_data",
     )
-    
+
     assert status.has_error is True
 
 
-def test_status_with_error_e02():
+def test_status_with_error_e02() -> None:
     """Test Status dataclass with error_e02."""
     status = Status(
         power=True,
@@ -118,13 +116,13 @@ def test_status_with_error_e02():
         error_w01=False,
         error_w02=False,
         error_w03=False,
-        raw_response=b"status_data"
+        raw_response=b"status_data",
     )
-    
+
     assert status.has_error is True
 
 
-def test_status_with_all_errors():
+def test_status_with_all_errors() -> None:
     """Test Status dataclass with all errors."""
     status = Status(
         power=True,
@@ -142,7 +140,7 @@ def test_status_with_all_errors():
         error_w01=True,
         error_w02=True,
         error_w03=True,
-        raw_response=b"status_data"
+        raw_response=b"status_data",
     )
-    
+
     assert status.has_error is True
