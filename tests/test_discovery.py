@@ -20,10 +20,6 @@ BAD_DATA = b"\x05\x00\x09 \x09\r*\x9b\x00TESLA\x00\x00\x00\x00\x00\x00\x00\x00\x
 RESPONSE = {"ip_address": "192.168.1.35", "device_id": "9B2A0D", "device_name": "TESLA"}
 BAD_RESPONSE = {"ip_address": "192.168.1.35", "device_id": "9B2A0D"}
 
-# pylint: disable=C0103
-# All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 async def test_discovery_unpack() -> None:
     """Test device discovery unpack."""
 
