@@ -144,7 +144,7 @@ This library is in no way approved, endorsed or supported by Tesla UK Ltd.
 
 MIT License
 
-Copyright (c) 2024 Andrew Jackson
+Copyright (c) 2025 Andrew Jackson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -175,7 +175,7 @@ SOFTWARE.
 [andrew-codechimp]: https://github.com/andrew-codechimp
 [keepchangelog]: http://keepachangelog.com/en/1.0.0/
 [license-shield]: https://img.shields.io/github/license/andrew-codechimp/python-tsmart.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2024.svg
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2025.svg
 [poetry-install]: https://python-poetry.org/docs/#installation
 [poetry]: https://python-poetry.org
 [pre-commit]: https://pre-commit.com/
