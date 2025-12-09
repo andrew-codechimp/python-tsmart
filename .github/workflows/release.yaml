@@ -8,7 +8,7 @@ on:
       - published
 
 env:
-  DEFAULT_PYTHON: "3.11"
+  DEFAULT_PYTHON: "3.14"
 
 jobs:
   release:
@@ -23,28 +23,24 @@ jobs:
     steps:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
-      - name: 🏗 Set up Poetry
-        run: pipx install poetry
+      - name: 🏗 Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
       - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-        id: python
         uses: actions/setup-python@v6.0.0
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
-          cache: "poetry"
-      - name: 🏗 Install workflow dependencies
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
       - name: 🏗 Install dependencies
-        run: poetry install --no-interaction
+        run: uv sync --all-extras
       - name: 🏗 Set package version
         run: |
           version="${{ github.event.release.tag_name }}"
           version="${version,,}"
           version="${version#v}"
-          poetry version --no-interaction "${version}"
+          uv run python -c "import tomli_w; import tomllib; f=open('pyproject.toml','rb'); d=tomllib.load(f); f.close(); d['project']['version']='${version}'; f=open('pyproject.toml','wb'); f.write(tomli_w.dumps(d)); f.close()"
       - name: 🏗 Build package
-        run: poetry build --no-interaction
+        run: uv build
       - name: 🚀 Publish to PyPi
         uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
