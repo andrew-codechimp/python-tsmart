@@ -80,9 +80,6 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
-# pyenv
-.python-version
-
 # virtualenv
 .venv
 venv/
@@ -93,9 +90,6 @@ ENV/
 
 # ruff
 .ruff_cache
-
-# Visual Studio Code
-.vscode
 
 # IntelliJ Idea family of suites
 .idea

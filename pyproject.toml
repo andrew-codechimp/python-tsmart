@@ -8,7 +8,7 @@ authors = [
 maintainers = [
     {name = "Andrew Jackson", email = "andrew@codechimp.org"}
 ]
-license = "MIT"
+license = {text = "MIT"}
 readme = "README.md"
 keywords = ["api", "async", "client"]
 classifiers = [
@@ -23,7 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">=3.11,<4"
+requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.0.0",
     "yarl>=1.6.0",
@@ -37,33 +37,29 @@ Documentation = "https://github.com/andrew-codechimp/python-tsmart"
 "Bug Tracker" = "https://github.com/andrew-codechimp/python-tsmart/issues"
 Changelog = "https://github.com/andrew-codechimp/python-tsmart/releases"
 
-[tool.poetry]
-packages = [
-    { include = "aiotsmart", from = "src" },
+[project.optional-dependencies]
+dev = [
+    "codespell==2.4.1",
+    "covdefaults==2.3.0",
+    "coverage[toml]==7.13.0",
+    "mypy==1.19.0",
+    "pre-commit==4.5.0",
+    "pre-commit-hooks==6.0.0",
+    "pylint==4.0.4",
+    "pytest>=8.3.4,<9",
+    "pytest-asyncio==1.3.0",
+    "pytest-cov==7.0.0",
+    "ruff==0.14.8",
+    "safety==3.7.0",
+    "yamllint==1.37.1",
+    "syrupy==5.0.0",
+    "aioresponses==0.7.8",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-aiohttp = ">=3.0.0"
-yarl = ">=1.6.0"
-asyncio-dgram = "^2.2.0"
+[tool.uv]
+package = true
 
-[tool.poetry.group.dev.dependencies]
-codespell = "2.3.0"
-covdefaults = "2.3.0"
-coverage = {version = "7.6.0", extras = ["toml"]}
-mypy = "1.11.0"
-pre-commit = "3.8.0"
-pre-commit-hooks = "4.6.0"
-pylint = "3.2.6"
-pytest = "8.3.2"
-pytest-asyncio = "0.23.8"
-pytest-cov = "5.0.0"
-ruff = "0.5.5"
-safety = "3.2.4"
-yamllint = "1.35.1"
-syrupy = "4.6.1"
-aioresponses = "0.7.6"
+[tool.uv.sources]
 
 [tool.coverage.report]
 show_missing = true
@@ -175,5 +171,8 @@ combine-as-imports = true
 max-complexity = 25
 
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core>=1.0.0"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiotsmart"]
