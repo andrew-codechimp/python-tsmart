@@ -73,7 +73,7 @@ repos:
         exclude: ^(uv\.lock)|(tests\/.*\.(json|ambr))$
         entry: uv run codespell
         args:
-            - --ignore-words-list=fo,incomfort,nam,bloc,ue,get's
+          - --ignore-words-list=fo,incomfort,nam,bloc,ue,get's
       - id: detect-private-key
         name: 🕵️  Detect Private Keys
         language: system
@@ -98,7 +98,7 @@ repos:
         pass_filenames: false
         always_run: true
         args:
-            - --branch=main
+          - --branch=main
       - id: pylint
         name: 🌟 Starring code with pylint
         language: system

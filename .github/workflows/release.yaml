@@ -3,56 +3,56 @@ name: Release
 
 # yamllint disable-line rule:truthy
 on:
-    release:
-        types:
-            - published
+  release:
+    types:
+      - published
 
 env:
-    DEFAULT_PYTHON: "3.14"
+  DEFAULT_PYTHON: "3.14"
 
 jobs:
-    release:
-        name: Releasing to PyPi
-        runs-on: ubuntu-latest
-        environment:
-            name: release
-            url: https://pypi.org/p/python-homeassistant-analytics
-        permissions:
-            contents: write
-            id-token: write
-        steps:
-            - name: ⤵️ Check out code from GitHub
-              uses: actions/checkout@v5.0.0
-            - name: 🏗 Install UV
-              uses: astral-sh/setup-uv@v3
-              with:
-                  enable-cache: true
-            - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-              uses: actions/setup-python@v6.0.0
-              with:
-                  python-version: ${{ env.DEFAULT_PYTHON }}
-            - name: 🏗 Install dependencies
-              run: uv sync --all-extras
-            - name: 🏗 Set package version
-              run: |
-                  version="${{ github.event.release.tag_name }}"
-                  version="${version,,}"
-                  version="${version#v}"
-                  uv run python -c "
-                  import tomli_w; import tomllib;
-                  f=open('pyproject.toml','rb'); d=tomllib.load(f); f.close();
-                  d['project']['version']='${version}';
-                  f=open('pyproject.toml','wb'); f.write(tomli_w.dumps(d)); f.close()
-                  "
-            - name: 🏗 Build package
-              run: uv build
-            - name: 🚀 Publish to PyPi
-              uses: pypa/gh-action-pypi-publish@v1.13.0
-              with:
-                  verbose: true
-                  print-hash: true
-            - name: ✍️ Sign published artifacts
-              uses: sigstore/gh-action-sigstore-python@v3.1.0
-              with:
-                  inputs: ./dist/*.tar.gz ./dist/*.whl
-                  release-signing-artifacts: true
+  release:
+    name: Releasing to PyPi
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/python-homeassistant-analytics
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: ⤵️ Check out code from GitHub
+        uses: actions/checkout@v5.0.0
+      - name: 🏗 Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
+        uses: actions/setup-python@v6.0.0
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+      - name: 🏗 Install dependencies
+        run: uv sync --all-extras
+      - name: 🏗 Set package version
+        run: |
+          version="${{ github.event.release.tag_name }}"
+          version="${version,,}"
+          version="${version#v}"
+          uv run python -c "
+          import tomli_w; import tomllib;
+          f=open('pyproject.toml','rb'); d=tomllib.load(f); f.close();
+          d['project']['version']='${version}';
+          f=open('pyproject.toml','wb'); f.write(tomli_w.dumps(d)); f.close()
+          "
+      - name: 🏗 Build package
+        run: uv build
+      - name: 🚀 Publish to PyPi
+        uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          verbose: true
+          print-hash: true
+      - name: ✍️ Sign published artifacts
+        uses: sigstore/gh-action-sigstore-python@v3.1.0
+        with:
+          inputs: ./dist/*.tar.gz ./dist/*.whl
+          release-signing-artifacts: true
