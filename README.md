@@ -23,6 +23,7 @@ pip install aiotsmart
 ```
 
 ## Usage
+
 ```python
 from aiotsmart.tsmart import TSmartClient, TSmartDiscovery, Mode
 
@@ -53,12 +54,12 @@ functionality. The format of the log is based on
 [Keep a Changelog][keepchangelog].
 
 Releases are based on [Semantic Versioning][semver], and use the format
-of ``MAJOR.MINOR.PATCH``. In a nutshell, the version will be incremented
+of `MAJOR.MINOR.PATCH`. In a nutshell, the version will be incremented
 based on the following:
 
-- ``MAJOR``: Incompatible or major changes.
-- ``MINOR``: Backwards-compatible new features and enhancements.
-- ``PATCH``: Backwards-compatible bugfixes and package updates.
+-   `MAJOR`: Incompatible or major changes.
+-   `MINOR`: Backwards-compatible new features and enhancements.
+-   `PATCH`: Backwards-compatible bugfixes and package updates.
 
 ## Contributing
 
@@ -76,14 +77,12 @@ This Python project is fully managed using the [UV][uv] package manager. UV is a
 
 You need at least:
 
-- Python 3.11+
-- [UV][uv-install]
-- NodeJS 12+ (including NPM)
+-   Python 3.11+
+-   [UV][uv-install]
 
 To install all packages, including all development requirements:
 
 ```bash
-npm install
 uv sync --all-extras
 ```
 
@@ -137,8 +136,8 @@ This library is in no way approved, endorsed or supported by Tesla UK Ltd.
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-</details>
 
+</details>
 
 ## License
 
