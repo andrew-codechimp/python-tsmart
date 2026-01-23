@@ -285,7 +285,7 @@ class TSmartClient:
 
         _LOGGER.info("Received control from %s" % self.ip_address)
 
-    async def async_restart(self, offset_ms: int = 1000) -> None:
+    async def restart(self, offset_ms: int = 1000) -> None:
         """Restart the device after specified offset time in milliseconds."""
         if not 100 <= offset_ms <= 10000:
             raise ValueError("Offset must be between 100ms and 10000ms")
@@ -320,7 +320,7 @@ class TSmartClient:
 
         _LOGGER.info("Restart command acknowledged by %s" % self.ip_address)
 
-    async def async_timesync(self) -> None:
+    async def timesync(self) -> None:
         """Set the device time using UTC timestamp in milliseconds."""
         timestamp_ms = int(time.time() * 1000)
 

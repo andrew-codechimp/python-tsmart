@@ -228,7 +228,7 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(loop, "create_datagram_endpoint", mock_create_endpoint)
 
     # Test with default offset
-    await client.async_restart()
+    await client.restart()
 
     # Verify the request format
     assert len(sent_data) == 1
@@ -246,7 +246,7 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
     # Test with custom offset
     sent_data.clear()
     sent_address.clear()
-    await client.async_restart(offset_ms=5000)
+    await client.restart(offset_ms=5000)
 
     # For 5000ms (0x1388): low=0x88, high=0x13
     request = sent_data[0]
@@ -262,11 +262,11 @@ async def test_async_restart_invalid_offset() -> None:
 
     # Test offset too small
     with pytest.raises(ValueError, match="Offset must be between 100ms and 10000ms"):
-        await client.async_restart(offset_ms=50)
+        await client.restart(offset_ms=50)
 
     # Test offset too large
     with pytest.raises(ValueError, match="Offset must be between 100ms and 10000ms"):
-        await client.async_restart(offset_ms=20000)
+        await client.restart(offset_ms=20000)
 
 
 async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -314,7 +314,7 @@ async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(loop, "create_datagram_endpoint", mock_create_endpoint)
 
     # Test timesync
-    await client.async_timesync()
+    await client.timesync()
 
     # Verify the request format
     assert len(sent_data) == 1
