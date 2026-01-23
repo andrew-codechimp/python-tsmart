@@ -204,12 +204,14 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
 
     class MockTransport:
+        """Mock transport for testing."""
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
+            """Mock sendto method."""
             sent_data.append(data)
             sent_address.append(addr)
 
         def close(self) -> None:
-            pass
+            """Mock close method."""
 
     async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
@@ -283,12 +285,14 @@ async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
 
     class MockTransport:
+        """Mock transport for testing."""
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
+            """Mock sendto method."""
             sent_data.append(data)
             sent_address.append(addr)
 
         def close(self) -> None:
-            pass
+            """Mock close method."""
 
     async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
