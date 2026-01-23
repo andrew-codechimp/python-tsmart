@@ -198,13 +198,16 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
 
     original_protocol_init = aiotsmart.tsmart.TsmartProtocol.__init__
 
-    def mock_protocol_init(self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any) -> None:
+    def mock_protocol_init(
+        self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any
+    ) -> None:
         original_protocol_init(self, request, unpack_function)
         # Immediately complete the future to simulate successful response
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
 
     class MockTransport:
         """Mock transport for testing."""
+
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
             """Mock sendto method."""
             sent_data.append(data)
@@ -213,7 +216,9 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
         def close(self) -> None:
             """Mock close method."""
 
-    async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
+    async def mock_create_endpoint(
+        factory: Any, sock: Any
+    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
         return MockTransport(), protocol
 
@@ -279,13 +284,16 @@ async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
 
     original_protocol_init = aiotsmart.tsmart.TsmartProtocol.__init__
 
-    def mock_protocol_init(self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any) -> None:
+    def mock_protocol_init(
+        self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any
+    ) -> None:
         original_protocol_init(self, request, unpack_function)
         # Immediately complete the future to simulate successful response
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
 
     class MockTransport:
         """Mock transport for testing."""
+
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
             """Mock sendto method."""
             sent_data.append(data)
@@ -294,7 +302,9 @@ async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
         def close(self) -> None:
             """Mock close method."""
 
-    async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
+    async def mock_create_endpoint(
+        factory: Any, sock: Any
+    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
         return MockTransport(), protocol
 
