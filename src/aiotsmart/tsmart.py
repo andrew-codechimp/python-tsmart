@@ -218,11 +218,6 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 configuration: Configuration = await protocol.done
-        except asyncio.TimeoutError:
-            raise
-        except asyncio.CancelledError:
-            raise
-
         finally:
             transport.close()
             sock.close()
@@ -252,12 +247,6 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 status: Status = await protocol.done
-        except asyncio.TimeoutError:
-            raise
-
-        except asyncio.CancelledError:
-            raise
-
         finally:
             transport.close()
             sock.close()
@@ -290,12 +279,6 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError:
-            raise
-
-        except asyncio.CancelledError:
-            raise
-
         finally:
             transport.close()
             sock.close()
@@ -331,12 +314,6 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError:
-            raise
-
-        except asyncio.CancelledError:
-            raise
-
         finally:
             transport.close()
             sock.close()
@@ -369,12 +346,6 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError:
-            raise
-
-        except asyncio.CancelledError:
-            raise
-
         finally:
             transport.close()
             sock.close()
