@@ -12,8 +12,6 @@ from typing import Any, Self, Callable
 
 from aiotsmart.exceptions import (
     TSmartBadResponseError,
-    TSmartCancelledError,
-    TSmartTimeoutError,
 )
 from aiotsmart.models import Configuration, Mode, Status
 from aiotsmart.util import validate_checksum, add_checksum
@@ -220,10 +218,10 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 configuration: Configuration = await protocol.done
-        except asyncio.TimeoutError as ex:
-            raise TSmartTimeoutError() from ex
-        except asyncio.CancelledError as ex:
-            raise TSmartCancelledError() from ex
+        except asyncio.TimeoutError:
+            raise
+        except asyncio.CancelledError:
+            raise
 
         finally:
             transport.close()
@@ -254,11 +252,11 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 status: Status = await protocol.done
-        except asyncio.TimeoutError as ex:
-            raise TSmartTimeoutError() from ex
+        except asyncio.TimeoutError:
+            raise
 
-        except asyncio.CancelledError as ex:
-            raise TSmartCancelledError() from ex
+        except asyncio.CancelledError:
+            raise
 
         finally:
             transport.close()
@@ -292,11 +290,11 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError as ex:
-            raise TSmartTimeoutError() from ex
+        except asyncio.TimeoutError:
+            raise
 
-        except asyncio.CancelledError as ex:
-            raise TSmartCancelledError() from ex
+        except asyncio.CancelledError:
+            raise
 
         finally:
             transport.close()
@@ -333,11 +331,11 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError as ex:
-            raise TSmartTimeoutError() from ex
+        except asyncio.TimeoutError:
+            raise
 
-        except asyncio.CancelledError as ex:
-            raise TSmartCancelledError() from ex
+        except asyncio.CancelledError:
+            raise
 
         finally:
             transport.close()
@@ -371,11 +369,11 @@ class TSmartClient:
             async with asyncio.timeout(TIMEOUT):
                 transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
                 await protocol.done
-        except asyncio.TimeoutError as ex:
-            raise TSmartTimeoutError() from ex
+        except asyncio.TimeoutError:
+            raise
 
-        except asyncio.CancelledError as ex:
-            raise TSmartCancelledError() from ex
+        except asyncio.CancelledError:
+            raise
 
         finally:
             transport.close()

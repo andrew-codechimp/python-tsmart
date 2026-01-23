@@ -2,9 +2,7 @@
 
 from aiotsmart.exceptions import (
     TSmartBadResponseError,
-    TSmartCancelledError,
     TSmartError,
-    TSmartTimeoutError,
 )
 from aiotsmart.discovery import TSmartDiscovery
 from aiotsmart.models import Configuration, DiscoveredDevice, Mode, Status
@@ -18,7 +16,5 @@ __all__ = [
     "Mode",
     "TSmartClient",
     "TSmartBadResponseError",
-    "TSmartCancelledError",
     "TSmartError",
-    "TSmartTimeoutError",
 ]
