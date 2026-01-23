@@ -57,9 +57,9 @@ Releases are based on [Semantic Versioning][semver], and use the format
 of `MAJOR.MINOR.PATCH`. In a nutshell, the version will be incremented
 based on the following:
 
--   `MAJOR`: Incompatible or major changes.
--   `MINOR`: Backwards-compatible new features and enhancements.
--   `PATCH`: Backwards-compatible bugfixes and package updates.
+- `MAJOR`: Incompatible or major changes.
+- `MINOR`: Backwards-compatible new features and enhancements.
+- `PATCH`: Backwards-compatible bugfixes and package updates.
 
 ## Contributing
 
@@ -77,8 +77,8 @@ This Python project is fully managed using the [UV][uv] package manager. UV is a
 
 You need at least:
 
--   Python 3.11+
--   [UV][uv-install]
+- Python 3.11+
+- [UV][uv-install]
 
 To install all packages, including all development requirements:
 
@@ -174,7 +174,7 @@ SOFTWARE.
 [andrew-codechimp]: https://github.com/andrew-codechimp
 [keepchangelog]: http://keepachangelog.com/en/1.0.0/
 [license-shield]: https://img.shields.io/github/license/andrew-codechimp/python-tsmart.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2025.svg
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [uv-install]: https://github.com/astral-sh/uv#installation
 [uv]: https://github.com/astral-sh/uv
 [pre-commit]: https://pre-commit.com/
