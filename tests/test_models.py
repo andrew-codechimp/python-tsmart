@@ -51,7 +51,7 @@ def test_status_no_errors() -> None:
         temperature_low=20,
         temperature_average=22,
         relay=False,
-        e01=False,        
+        e01=False,
         e01_count=0,
         e02=False,
         e02_count=0,
@@ -76,5 +76,3 @@ def test_status_no_errors() -> None:
     assert status.temperature_low == 20
     assert status.temperature_average == 22
     assert status.relay is False
-
-

@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import pytest
 
 import aiotsmart
 
 from aiotsmart.exceptions import TSmartBadResponseError
-from aiotsmart.models import Mode, Status
 import aiotsmart.tsmart
 from aiotsmart.util import add_checksum
 
@@ -192,42 +191,42 @@ async def test_tsmart_protocol_datagram_received() -> None:
 async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test async_restart method."""
     client = aiotsmart.TSmartClient("192.168.1.100")
-    
+
     # Track the sent data
     sent_data = []
     sent_address = []
-    
+
     original_protocol_init = aiotsmart.tsmart.TsmartProtocol.__init__
-    
-    def mock_protocol_init(self, request, unpack_function):
+
+    def mock_protocol_init(self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any) -> None:
         original_protocol_init(self, request, unpack_function)
         # Immediately complete the future to simulate successful response
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
-    
+
     class MockTransport:
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
             sent_data.append(data)
             sent_address.append(addr)
-        
+
         def close(self) -> None:
             pass
-    
-    async def mock_create_endpoint(factory, sock):  # pylint: disable=unused-argument
+
+    async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
         return MockTransport(), protocol
-    
+
     # Patch the protocol init and create_datagram_endpoint
     monkeypatch.setattr(aiotsmart.tsmart.TsmartProtocol, "__init__", mock_protocol_init)
     loop = asyncio.get_running_loop()
     monkeypatch.setattr(loop, "create_datagram_endpoint", mock_create_endpoint)
-    
+
     # Test with default offset
     await client.async_restart()
-    
+
     # Verify the request format
     assert len(sent_data) == 1
     assert sent_address[0] == ("192.168.1.100", 1337)
-    
+
     # Check the command structure: [0x02, low_byte, high_byte, checksum]
     # For 1000ms (0x03E8): low=0xE8, high=0x03
     request = sent_data[0]
@@ -236,12 +235,12 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
     assert request[1] == 0xE8  # Low byte of 1000 (default)
     assert request[2] == 0x03  # High byte of 1000
     # request[3] is the checksum
-    
+
     # Test with custom offset
     sent_data.clear()
     sent_address.clear()
     await client.async_restart(offset_ms=5000)
-    
+
     # For 5000ms (0x1388): low=0x88, high=0x13
     request = sent_data[0]
     assert request[0] == 0x02
@@ -253,11 +252,11 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_async_restart_invalid_offset() -> None:
     """Test async_restart with invalid offset values."""
     client = aiotsmart.TSmartClient("192.168.1.100")
-    
+
     # Test offset too small
     with pytest.raises(ValueError, match="Offset must be between 100ms and 10000ms"):
         await client.async_restart(offset_ms=50)
-    
+
     # Test offset too large
     with pytest.raises(ValueError, match="Offset must be between 100ms and 10000ms"):
         await client.async_restart(offset_ms=20000)
@@ -266,58 +265,56 @@ async def test_async_restart_invalid_offset() -> None:
 async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test async_timesync method."""
     client = aiotsmart.TSmartClient("192.168.1.100")
-    
+
     # Mock time.time() to return a known value that fits in 32-bit milliseconds
     # Using a smaller timestamp that fits in 32-bit unsigned int when converted to milliseconds
     mock_time = 4294967.0  # This gives ~4294967000 ms, which fits in 32-bit
     monkeypatch.setattr("time.time", lambda: mock_time)
-    
+
     # Track the sent data
     sent_data = []
     sent_address = []
-    
+
     original_protocol_init = aiotsmart.tsmart.TsmartProtocol.__init__
-    
-    def mock_protocol_init(self, request, unpack_function):
+
+    def mock_protocol_init(self: aiotsmart.tsmart.TsmartProtocol, request: bytearray, unpack_function: Any) -> None:
         original_protocol_init(self, request, unpack_function)
         # Immediately complete the future to simulate successful response
         asyncio.get_running_loop().call_soon(self.done.set_result, None)
-    
+
     class MockTransport:
         def sendto(self, data: bytes, addr: tuple[str, int]) -> None:
             sent_data.append(data)
             sent_address.append(addr)
-        
+
         def close(self) -> None:
             pass
-    
-    async def mock_create_endpoint(factory, sock):  # pylint: disable=unused-argument
+
+    async def mock_create_endpoint(factory: Any, sock: Any) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
         protocol = factory()
         return MockTransport(), protocol
-    
+
     # Patch the protocol init and create_datagram_endpoint
     monkeypatch.setattr(aiotsmart.tsmart.TsmartProtocol, "__init__", mock_protocol_init)
     loop = asyncio.get_running_loop()
     monkeypatch.setattr(loop, "create_datagram_endpoint", mock_create_endpoint)
-    
+
     # Test timesync
     await client.async_timesync()
-    
+
     # Verify the request format
     assert len(sent_data) == 1
     assert sent_address[0] == ("192.168.1.100", 1337)
-    
+
     # Check the command structure: [0x03, 0x00, 0x00, timestamp_ms (4 bytes), checksum]
-    import struct
     request = sent_data[0]
     assert len(request) == 8  # 3 bytes + 4 byte timestamp + 1 checksum
     assert request[0] == 0x03  # Timesync command
     assert request[1] == 0x00
     assert request[2] == 0x00
-    
+
     # Extract timestamp from bytes 3-6 (little-endian unsigned int)
     # The last byte (request[7]) is the checksum
     timestamp_ms = struct.unpack("<I", request[3:7])[0]
     expected_timestamp_ms = int(mock_time * 1000)
     assert timestamp_ms == expected_timestamp_ms
-    

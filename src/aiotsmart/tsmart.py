@@ -72,7 +72,7 @@ def _unpack_configuration_response(
         device_id=f"{device_id:04X}",
         device_name=device_name.decode("utf-8").split("\x00")[0],
         firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
-        firmware_name=firmware_name.decode("utf-8").split("\x00")[0]
+        firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
     )
     _LOGGER.info(
         "Configuration received %s %s"
@@ -304,7 +304,6 @@ class TSmartClient:
 
         _LOGGER.info("Received control from %s" % self.ip_address)
 
-
     async def async_restart(self, offset_ms: int = 1000) -> None:
         """Restart the device after specified offset time in milliseconds."""
         if not 100 <= offset_ms <= 10000:
@@ -350,7 +349,9 @@ class TSmartClient:
         """Set the device time using UTC timestamp in milliseconds."""
         timestamp_ms = int(time.time() * 1000)
 
-        _LOGGER.info("Setting time on device %s to %d" % (self.ip_address, timestamp_ms))
+        _LOGGER.info(
+            "Setting time on device %s to %d" % (self.ip_address, timestamp_ms)
+        )
 
         loop = asyncio.get_running_loop()
 
@@ -381,7 +382,6 @@ class TSmartClient:
             sock.close()
 
         _LOGGER.info("Time set command acknowledged by %s" % self.ip_address)
-
 
     async def __aenter__(self) -> Self:
         """Async enter.
