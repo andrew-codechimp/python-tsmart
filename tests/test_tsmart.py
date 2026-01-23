@@ -217,8 +217,8 @@ async def test_async_restart(monkeypatch: pytest.MonkeyPatch) -> None:
             """Mock close method."""
 
     async def mock_create_endpoint(
-        factory: Any, sock: Any
-    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
+        factory: Any, _sock: Any
+    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:
         protocol = factory()
         return MockTransport(), protocol
 
@@ -303,8 +303,8 @@ async def test_async_timesync(monkeypatch: pytest.MonkeyPatch) -> None:
             """Mock close method."""
 
     async def mock_create_endpoint(
-        factory: Any, sock: Any
-    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:  # pylint: disable=unused-argument
+        factory: Any, _sock: Any
+    ) -> tuple[MockTransport, aiotsmart.tsmart.TsmartProtocol]:
         protocol = factory()
         return MockTransport(), protocol
 
