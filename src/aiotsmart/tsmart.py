@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import logging
 import socket
 import struct
+import time
 from typing import Any, Self, Callable
 
 from aiotsmart.exceptions import (
@@ -71,8 +72,7 @@ def _unpack_configuration_response(
         device_id=f"{device_id:04X}",
         device_name=device_name.decode("utf-8").split("\x00")[0],
         firmware_version=f"{firmware_version_major}.{firmware_version_minor}.{firmware_version_deployment}",
-        firmware_name=firmware_name.decode("utf-8").split("\x00")[0],
-        raw_response=data,
+        firmware_name=firmware_name.decode("utf-8").split("\x00")[0]
     )
     _LOGGER.info(
         "Configuration received %s %s"
@@ -120,23 +120,40 @@ def _unpack_control_read_response(request: bytearray, data: bytes) -> Status | N
         checksum,
     ) = response_struct.unpack(data)
 
+    # Extract 16-bit values (flag in bit 15, counter in bits 0-14)
+    e01_value = error_buffer[0] | (error_buffer[1] << 8)
+    e02_value = error_buffer[2] | (error_buffer[3] << 8)
+    e03_value = error_buffer[4] | (error_buffer[5] << 8)
+    e04_value = error_buffer[6] | (error_buffer[7] << 8)
+    w01_value = error_buffer[8] | (error_buffer[9] << 8)
+    w02_value = error_buffer[10] | (error_buffer[11] << 8)
+    w03_value = error_buffer[12] | (error_buffer[13] << 8)
+    e05_value = error_buffer[14] | (error_buffer[15] << 8)
+
     status = Status(
         power=bool(power),
-        setpoint=int(setpoint / 10),
+        temperature_average=(t_high + t_low) / 20,
+        temperature_high=t_high / 10,
+        temperature_low=t_low / 10,
+        setpoint=setpoint / 10,
         mode=Mode(mode),
-        temperature_high=int(t_high / 10),
-        temperature_low=int(t_low / 10),
-        temperature_average=int((t_high + t_low) / 20),
         relay=bool(relay),
-        error_e01=(error_buffer[0] >> 7) & 1 == 1,
-        error_e02=(error_buffer[2] >> 7) & 1 == 1,
-        error_e03=(error_buffer[4] >> 7) & 1 == 1,
-        error_e04=(error_buffer[6] >> 7) & 1 == 1,
-        error_w01=(error_buffer[8] >> 7) & 1 == 1,
-        error_w02=(error_buffer[10] >> 7) & 1 == 1,
-        error_w03=(error_buffer[12] >> 7) & 1 == 1,
-        error_e05=(error_buffer[14] >> 7) & 1 == 1,
-        raw_response=data,
+        e01=(e01_value >> 15) & 1 == 1,
+        e01_count=e01_value & 0x7FFF,
+        e02=(e02_value >> 15) & 1 == 1,
+        e02_count=e02_value & 0x7FFF,
+        e03=(e03_value >> 15) & 1 == 1,
+        e03_count=e03_value & 0x7FFF,
+        e04=(e04_value >> 15) & 1 == 1,
+        e04_count=e04_value & 0x7FFF,
+        e05=(e05_value >> 15) & 1 == 1,
+        e05_count=e05_value & 0x7FFF,
+        w01=(w01_value >> 15) & 1 == 1,
+        w01_count=w01_value & 0x7FFF,
+        w02=(w02_value >> 15) & 1 == 1,
+        w02_count=w02_value & 0x7FFF,
+        w03=(w03_value >> 15) & 1 == 1,
+        w03_count=w03_value & 0x7FFF,
     )
     return status
 
@@ -286,6 +303,85 @@ class TSmartClient:
             sock.close()
 
         _LOGGER.info("Received control from %s" % self.ip_address)
+
+
+    async def async_restart(self, offset_ms: int = 1000) -> None:
+        """Restart the device after specified offset time in milliseconds."""
+        if not 100 <= offset_ms <= 10000:
+            raise ValueError("Offset must be between 100ms and 10000ms")
+
+        _LOGGER.info("Restarting device %s after %dms" % (self.ip_address, offset_ms))
+
+        loop = asyncio.get_running_loop()
+
+        sock = self.create_socket()
+
+        # Split offset into low and high bytes for sub-command
+        sub = offset_ms & 0xFF  # Low byte
+        sub2 = (offset_ms >> 8) & 0xFF  # High byte
+
+        request = struct.pack("=BBBB", 0x02, sub, sub2, 0)
+
+        request_checksum = add_checksum(request)
+
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: TsmartProtocol(request_checksum, _unpack_control_write_response),
+            sock=sock,
+        )
+
+        try:
+            _LOGGER.debug("Sending restart message.")
+            async with asyncio.timeout(TIMEOUT):
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                await protocol.done
+        except asyncio.TimeoutError as ex:
+            raise TSmartTimeoutError() from ex
+
+        except asyncio.CancelledError as ex:
+            raise TSmartCancelledError() from ex
+
+        finally:
+            transport.close()
+            sock.close()
+
+        _LOGGER.info("Restart command acknowledged by %s" % self.ip_address)
+
+    async def async_timesync(self) -> None:
+        """Set the device time using UTC timestamp in milliseconds."""
+        timestamp_ms = int(time.time() * 1000)
+
+        _LOGGER.info("Setting time on device %s to %d" % (self.ip_address, timestamp_ms))
+
+        loop = asyncio.get_running_loop()
+
+        sock = self.create_socket()
+
+        request = struct.pack("=BBBIB", 0x03, 0, 0, timestamp_ms, 0)
+
+        request_checksum = add_checksum(request)
+
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: TsmartProtocol(request_checksum, _unpack_control_write_response),
+            sock=sock,
+        )
+
+        try:
+            _LOGGER.debug("Sending time set message.")
+            async with asyncio.timeout(TIMEOUT):
+                transport.sendto(request_checksum, (self.ip_address, UDP_PORT))
+                await protocol.done
+        except asyncio.TimeoutError as ex:
+            raise TSmartTimeoutError() from ex
+
+        except asyncio.CancelledError as ex:
+            raise TSmartCancelledError() from ex
+
+        finally:
+            transport.close()
+            sock.close()
+
+        _LOGGER.info("Time set command acknowledged by %s" % self.ip_address)
+
 
     async def __aenter__(self) -> Self:
         """Async enter.

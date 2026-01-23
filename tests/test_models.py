@@ -33,14 +33,12 @@ def test_configuration() -> None:
         device_name="Test Config",
         firmware_version="1.2.3",
         firmware_name="Test Firmware",
-        raw_response=b"test_data",
     )
 
     assert config.device_id == "DEF456"
     assert config.device_name == "Test Config"
     assert config.firmware_version == "1.2.3"
     assert config.firmware_name == "Test Firmware"
-    assert config.raw_response == b"test_data"
 
 
 def test_status_no_errors() -> None:
@@ -53,15 +51,22 @@ def test_status_no_errors() -> None:
         temperature_low=20,
         temperature_average=22,
         relay=False,
-        error_e01=False,
-        error_e02=False,
-        error_e03=False,
-        error_e04=False,
-        error_e05=False,
-        error_w01=False,
-        error_w02=False,
-        error_w03=False,
-        raw_response=b"status_data",
+        e01=False,        
+        e01_count=0,
+        e02=False,
+        e02_count=0,
+        e03=False,
+        e03_count=0,
+        e04=False,
+        e04_count=0,
+        e05=False,
+        e05_count=0,
+        w01=False,
+        w01_count=0,
+        w02=False,
+        w02_count=0,
+        w03=False,
+        w03_count=0,
     )
 
     assert status.power is True
@@ -71,76 +76,5 @@ def test_status_no_errors() -> None:
     assert status.temperature_low == 20
     assert status.temperature_average == 22
     assert status.relay is False
-    assert status.has_error is False
 
 
-def test_status_with_error_e01() -> None:
-    """Test Status dataclass with error_e01."""
-    status = Status(
-        power=True,
-        setpoint=22,
-        mode=Mode.ECO,
-        temperature_high=25,
-        temperature_low=20,
-        temperature_average=22,
-        relay=False,
-        error_e01=True,
-        error_e02=False,
-        error_e03=False,
-        error_e04=False,
-        error_e05=False,
-        error_w01=False,
-        error_w02=False,
-        error_w03=False,
-        raw_response=b"status_data",
-    )
-
-    assert status.has_error is True
-
-
-def test_status_with_error_e02() -> None:
-    """Test Status dataclass with error_e02."""
-    status = Status(
-        power=True,
-        setpoint=22,
-        mode=Mode.ECO,
-        temperature_high=25,
-        temperature_low=20,
-        temperature_average=22,
-        relay=False,
-        error_e01=False,
-        error_e02=True,
-        error_e03=False,
-        error_e04=False,
-        error_e05=False,
-        error_w01=False,
-        error_w02=False,
-        error_w03=False,
-        raw_response=b"status_data",
-    )
-
-    assert status.has_error is True
-
-
-def test_status_with_all_errors() -> None:
-    """Test Status dataclass with all errors."""
-    status = Status(
-        power=True,
-        setpoint=22,
-        mode=Mode.ECO,
-        temperature_high=25,
-        temperature_low=20,
-        temperature_average=22,
-        relay=False,
-        error_e01=True,
-        error_e02=True,
-        error_e03=True,
-        error_e04=True,
-        error_e05=True,
-        error_w01=True,
-        error_w02=True,
-        error_w03=True,
-        raw_response=b"status_data",
-    )
-
-    assert status.has_error is True

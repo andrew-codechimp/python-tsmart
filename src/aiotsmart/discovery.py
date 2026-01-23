@@ -108,9 +108,9 @@ class DiscoveryProtocol(asyncio.DatagramProtocol):
             if callable(self.callback):
                 result = self.callback(
                     DiscoveredDevice(
-                        response["ip_address"],
-                        response["device_id"],
-                        response["device_name"],
+                        ip_address= response["ip_address"],
+                        device_id=response["device_id"],
+                        device_name=response["device_name"],
                     )
                 )
                 if asyncio.iscoroutine(result):

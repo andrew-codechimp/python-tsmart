@@ -19,7 +19,7 @@ class Mode(IntEnum):
     CRITICAL = 0x22
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, kw_only=True)
 class DiscoveredDevice:
     """Discovery model."""
 
@@ -28,7 +28,7 @@ class DiscoveredDevice:
     device_name: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Configuration:
     """Configuration model."""
 
@@ -36,10 +36,9 @@ class Configuration:
     device_name: str
     firmware_version: str
     firmware_name: str
-    raw_response: bytes
 
 
-@dataclass
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Status:
     """Status model."""
 
@@ -50,26 +49,19 @@ class Status:
     temperature_low: int
     temperature_average: int
     relay: bool
-    error_e01: bool
-    error_e02: bool
-    error_e03: bool
-    error_e04: bool
-    error_e05: bool
-    error_w01: bool
-    error_w02: bool
-    error_w03: bool
-    raw_response: bytes
-
-    @property
-    def has_error(self) -> bool:
-        """Is there any error."""
-        return (
-            self.error_e01
-            or self.error_e02
-            or self.error_e03
-            or self.error_e04
-            or self.error_e05
-            or self.error_w01
-            or self.error_w02
-            or self.error_w03
-        )
+    e01: bool
+    e01_count: int
+    e02: bool
+    e02_count: int
+    e03: bool
+    e03_count: int
+    e04: bool
+    e04_count: int
+    e05: bool
+    e05_count: int
+    w01: bool
+    w01_count: int
+    w02: bool
+    w02_count: int
+    w03: bool
+    w03_count: int
